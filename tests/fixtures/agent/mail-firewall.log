@@ -1,0 +1,8 @@
+Jun 25 12:03:00 mail postfix/smtpd[2001]: warning: unknown[203.0.113.31]: SASL LOGIN authentication failed: authentication failure
+Jun 25 12:03:01 mail postfix/smtpd[2002]: NOQUEUE: reject: RCPT from unknown[203.0.113.32]: 554 5.7.1 <victim@example.net>: Relay access denied; from=<spam@example.org> to=<victim@example.net> proto=ESMTP helo=<bad>
+Jun 25 12:03:02 mail postfix/postscreen[2003]: PREGREET 11 after 0.1 from [203.0.113.33]:45678: EHLO scanner
+Jun 25 12:03:03 mail postfix/postscreen[2004]: DNSBL rank 3 for [203.0.113.34]:45679
+Jun 25 12:04:00 host kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00 SRC=203.0.113.41 DST=192.0.2.10 LEN=60 PROTO=TCP SPT=55123 DPT=22 WINDOW=64240
+Jun 25 12:04:01 host kernel: DROP IN=eth0 OUT= MAC=00 SRC=203.0.113.42 DST=192.0.2.10 LEN=60 PROTO=TCP SPT=55124 DPT=25 WINDOW=64240
+Jun 25 12:04:02 host kernel: firewall drop IN=eth0 OUT= MAC=00 SRC=203.0.113.43 DST=192.0.2.10 LEN=60 PROTO=TCP SPT=55125 DPT=6379 WINDOW=64240
+Jun 25 12:04:03 host kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00 SRC=203.0.113.44 DST=192.0.2.10 LEN=84 PROTO=ICMP TYPE=8 CODE=0

@@ -1,0 +1,9 @@
+203.0.113.71	4	object_storage_access_denied
+203.0.113.72	5	object_storage_signature_or_key_rejected
+203.0.113.73	3	object_storage_bucket_probe
+203.0.113.74	4	object_storage_access_denied
+203.0.113.75	5	object_storage_signature_or_key_rejected
+203.0.113.81	4	edge_waf_block
+203.0.113.82	3	edge_challenge_issued
+203.0.113.83	3	edge_low_bot_score
+203.0.113.84	2	edge_origin_error_pressure

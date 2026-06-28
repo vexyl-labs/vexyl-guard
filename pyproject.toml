@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vexyl-guard"
+version = "0.1.0"
+description = "Vexyl Guard local defensive tooling"
+requires-python = ">=3.10"
+
+[project.scripts]
+vexyl = "intel.cli:main"
+
+[tool.setuptools]
+packages = ["intel"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"intel" = [
+  "migrations/*.sql",
+  "seeds/*.jsonl"
+]

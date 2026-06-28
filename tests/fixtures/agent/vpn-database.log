@@ -1,0 +1,11 @@
+Jun 25 12:05:00 vpn openvpn[3001]: 203.0.113.51:49321 TLS Error: TLS key negotiation failed to occur within 60 seconds (check your network connectivity)
+Jun 25 12:05:01 vpn openvpn[3002]: TLS Error: incoming packet authentication failed from [AF_INET]203.0.113.52:51194
+Jun 25 12:05:02 vpn openvpn[3003]: 203.0.113.53:51200 VERIFY ERROR: depth=0, error=certificate has expired: CN=bad
+Jun 25 12:05:03 vpn openvpn[3004]: 203.0.113.54:51201 AUTH_FAILED,Data channel cipher negotiation failed
+Jun 25 12:05:04 vpn charon: 12[IKE] no IKE config found for 192.0.2.10...203.0.113.55, sending NO_PROPOSAL_CHOSEN
+Jun 25 12:05:05 vpn kernel: wireguard: wg0: Invalid handshake initiation from 203.0.113.56:51820
+Jun 25 12:06:00 db postgres[4001]: [1-1] user=postgres,db=postgres,app=[unknown],client=203.0.113.61 FATAL: password authentication failed for user "postgres"
+Jun 25 12:06:01 db postgres[4002]: [2-1] FATAL: no pg_hba.conf entry for host "203.0.113.62", user "postgres", database "postgres", SSL off
+2026-06-25T12:06:02.000000Z 10 [Warning] [MY-010926] [Server] Access denied for user 'root'@'203.0.113.63' (using password: YES)
+2026-06-25T12:06:03.000000Z 11 [Warning] [MY-010055] [Server] Host '203.0.113.64' is not allowed to connect to this MySQL server
+{"t":{"$date":"2026-06-25T12:06:04.000Z"},"s":"I","c":"ACCESS","id":20249,"ctx":"conn12","msg":"Authentication failed","attr":{"mechanism":"SCRAM-SHA-256","principalName":"admin","authenticationDatabase":"admin","remote":"203.0.113.65:51234"}}

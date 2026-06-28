@@ -1,0 +1,5 @@
+web_recon	203.0.113.20	tech_stack_enumeration	tech_stack_enum	3	medium
+web_recon	203.0.113.21	tech_stack_enumeration	tech_stack_enum	3	medium
+exploit_probe	203.0.113.22	secret_harvest_probe	secret_harvest	6	high
+llm_app_probe	203.0.113.23	prompt_injection_probe	ai_app_attack	6	high
+deception_trip	203.0.113.24	deception_path_touched	deception	8	high

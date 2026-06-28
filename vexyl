@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+from pathlib import Path
+import sys
+
+
+ROOT = Path(__file__).resolve().parent
+OPT_ROOT = Path("/opt/vexyl")
+for candidate in (ROOT, OPT_ROOT):
+    if (candidate / "intel").is_dir():
+        sys.path.insert(0, str(candidate))
+        break
+
+from intel.cli import main
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

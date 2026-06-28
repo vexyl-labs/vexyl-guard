@@ -1,0 +1,3 @@
+Jun 25 12:00:01 srv sshd[100]: Failed password for invalid user admin from 198.51.100.23 port 51144 ssh2
+Jun 25 12:00:02 srv sshd[101]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.7 user=root
+Jun 25 12:00:03 srv sshd[102]: Unable to negotiate with 2001:db8::42 port 44322: no matching key exchange method found

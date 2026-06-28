@@ -1,0 +1,11 @@
+vpn_tls_probe	203.0.113.51	openvpn_tls_negotiation_failed	vpn_tls	3	medium
+vpn_packet_probe	203.0.113.52	openvpn_packet_auth_failed	vpn_packet	3	medium
+vpn_certificate_probe	203.0.113.53	openvpn_certificate_rejected	vpn_cert	4	medium
+vpn_auth_attack	203.0.113.54	openvpn_auth_failed	vpn_auth	5	medium
+vpn_ike_probe	203.0.113.55	ipsec_no_ike_config	vpn_ike	3	medium
+vpn_handshake_probe	203.0.113.56	wireguard_invalid_handshake	vpn_handshake	3	medium
+db_auth_attack	203.0.113.61	postgres_password_auth_failed	db_postgres_auth	5	medium
+db_access_probe	203.0.113.62	postgres_no_hba_entry	db_postgres_access	4	medium
+db_auth_attack	203.0.113.63	mysql_access_denied	db_mysql_auth	5	medium
+db_access_probe	203.0.113.64	mysql_host_not_allowed	db_mysql_access	4	medium
+db_auth_attack	203.0.113.65	mongodb_auth_failed	db_mongodb_auth	5	medium

@@ -1,0 +1,8 @@
+mail_auth_attack	203.0.113.31	smtp_sasl_auth_failed	mail_auth	5	medium
+mail_relay_probe	203.0.113.32	smtp_relay_denied	mail_relay	4	medium
+mail_protocol_probe	203.0.113.33	smtp_pregreet	mail_protocol	3	medium
+mail_reputation_signal	203.0.113.34	smtp_dnsbl_source	mail_reputation	3	medium
+firewall_drop	203.0.113.41	firewall_ssh_probe	firewall_ssh	2	medium
+firewall_drop	203.0.113.42	firewall_mail_probe	firewall_mail	2	medium
+firewall_drop	203.0.113.43	firewall_exposed_service_probe	firewall_exposed_service	3	medium
+firewall_drop	203.0.113.44	firewall_icmp_probe	firewall_icmp	1	low

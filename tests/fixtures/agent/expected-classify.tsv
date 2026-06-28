@@ -1,0 +1,10 @@
+ssh_auth_attack	198.51.100.23	ssh_failed_password
+ssh_auth_attack	203.0.113.7	auth_failure
+ssh_auth_attack	2001:db8::42	ssh_negotiation_failure
+web_recon	203.0.113.10	cms_wordpress_probe	cms_probe	4	medium
+exploit_probe	203.0.113.11	secret_harvest_probe	secret_harvest	6	high
+llm_app_probe	203.0.113.12	prompt_injection_probe	ai_app_attack	6	high
+deception_trip	203.0.113.13	deception_path_touched	deception	8	high
+credential_attack	203.0.113.14	web_credential_surface_probe	credential_surface	3	medium
+web_recon	203.0.113.15	scanner_user_agent	scanner_identity	2	low
+web_recon	203.0.113.16	wordlist_probe	wordlist_scanning	2	low

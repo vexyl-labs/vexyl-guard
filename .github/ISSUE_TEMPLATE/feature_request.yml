@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest a defensive improvement for Vexyl Guard.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep requests defensive and avoid exposing sensitive operating details.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Operator problem
+      description: What practical server-operator problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: What should Vexyl Guard do differently?
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety and rollout notes
+      description: How should this preserve monitor-first behavior, review, and operator control?
+    validations:
+      required: true

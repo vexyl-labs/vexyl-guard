@@ -1,0 +1,11 @@
+203.0.113.51	3	openvpn_tls_negotiation_failed
+203.0.113.52	3	openvpn_packet_auth_failed
+203.0.113.53	4	openvpn_certificate_rejected
+203.0.113.54	5	openvpn_auth_failed
+203.0.113.55	3	ipsec_no_ike_config
+203.0.113.56	3	wireguard_invalid_handshake
+203.0.113.61	5	postgres_password_auth_failed
+203.0.113.62	4	postgres_no_hba_entry
+203.0.113.63	5	mysql_access_denied
+203.0.113.64	4	mysql_host_not_allowed
+203.0.113.65	5	mongodb_auth_failed

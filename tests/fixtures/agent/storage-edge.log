@@ -1,0 +1,9 @@
+79a59df900b949e55d96a1e698f0ee9a mybucket [25/Jun/2026:12:07:00 +0000] 203.0.113.71 - 3E57427F33A59F07 REST.GET.BUCKET - "GET /mybucket?list-type=2 HTTP/1.1" 403 AccessDenied 0 - 10 9 "-" "curl/8.0" - - SigV4 TLS_AES_128_GCM_SHA256 AuthHeader example.s3.amazonaws.com TLSv1.3 -
+79a59df900b949e55d96a1e698f0ee9a mybucket [25/Jun/2026:12:07:01 +0000] 203.0.113.72 - 3E57427F33A59F08 REST.GET.OBJECT backup.zip "GET /mybucket/backup.zip HTTP/1.1" 403 SignatureDoesNotMatch 0 - 12 10 "-" "aws-cli/2" - - SigV4 TLS_AES_128_GCM_SHA256 AuthHeader example.s3.amazonaws.com TLSv1.3 -
+79a59df900b949e55d96a1e698f0ee9a - [25/Jun/2026:12:07:02 +0000] 203.0.113.73 - 3E57427F33A59F09 REST.GET.BUCKET missing "GET /missing?list-type=2 HTTP/1.1" 404 NoSuchBucket 0 - 8 7 "-" "python-requests/2.31" - - SigV4 TLS_AES_128_GCM_SHA256 AuthHeader missing.s3.amazonaws.com TLSv1.3 -
+{"deploymentid":"minio","time":"2026-06-25T12:07:03Z","api":{"name":"ListBuckets","status":"AccessDenied","statusCode":403},"remotehost":"203.0.113.74","requestID":"1778","userAgent":"aws-cli/2"}
+{"eventSource":"s3.amazonaws.com","sourceIPAddress":"203.0.113.75","eventName":"GetObject","errorCode":"InvalidAccessKeyId","errorMessage":"The AWS Access Key Id you provided does not exist"}
+{"ClientIP":"203.0.113.81","ClientRequestMethod":"GET","ClientRequestURI":"/login","EdgeResponseStatus":403,"SecurityAction":"block","WAFAction":"block","RayID":"abc","BotScore":4}
+{"ClientIP":"203.0.113.82","ClientRequestMethod":"GET","ClientRequestURI":"/api","EdgeResponseStatus":403,"SecurityAction":"managed_challenge","RayID":"def","BotScore":12}
+{"ClientIP":"203.0.113.83","ClientRequestMethod":"GET","ClientRequestURI":"/","EdgeResponseStatus":200,"RayID":"ghi","BotScore":3}
+{"ClientIP":"203.0.113.84","ClientRequestMethod":"GET","ClientRequestURI":"/","EdgeResponseStatus":522,"RayID":"jkl","OriginResponseStatus":0}

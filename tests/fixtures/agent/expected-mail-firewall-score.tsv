@@ -1,0 +1,8 @@
+203.0.113.31	5	smtp_sasl_auth_failed
+203.0.113.32	4	smtp_relay_denied
+203.0.113.33	3	smtp_pregreet
+203.0.113.34	3	smtp_dnsbl_source
+203.0.113.41	2	firewall_ssh_probe
+203.0.113.42	2	firewall_mail_probe
+203.0.113.43	3	firewall_exposed_service_probe
+203.0.113.44	1	firewall_icmp_probe

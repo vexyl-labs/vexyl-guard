@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a Vexyl Guard defect or install problem.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, private logs, customer data, runnable exploit code, malware code, or offensive instructions.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, install method, Vexyl version, and relevant component.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Safe reproduction steps
+      description: Provide safe, redacted steps to reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs or output
+      render: text
+    validations:
+      required: false

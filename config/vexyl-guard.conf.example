@@ -1,0 +1,82 @@
+# Vexyl Guard host agent configuration.
+# Install as /etc/vexyl/guard.conf and edit for the host.
+
+# monitor: log and report decisions only.
+# enforce: apply firewall denies after threshold.
+VEXYL_MODE=monitor
+
+# Cloudflare Worker URL and ingest token. Leave empty for local-only mode.
+VEXYL_API_URL=
+VEXYL_API_TOKEN=
+
+# Scoring controls.
+VEXYL_THRESHOLD=5
+VEXYL_WINDOW_SECONDS=900
+VEXYL_BLOCK_SECONDS=86400
+
+# Agent state.
+VEXYL_STATE_DIR=/var/lib/vexyl
+VEXYL_CONFIG_DIR=/etc/vexyl
+VEXYL_AGENT_BIN=/usr/local/sbin/vexyl-guard
+VEXYL_UPGRADE_BASE_URL=https://vexyl.dev
+VEXYL_UPGRADE_ALLOW_DOWNGRADE=false
+VEXYL_UPGRADE_FORCE=false
+VEXYL_RELEASE_PUBLIC_KEY_FILE=/etc/vexyl/release-signing-public.pem
+
+# Firewall backend: auto, nft, iptables, none.
+VEXYL_FIREWALL=auto
+
+# Space-separated IPs/CIDRs to never block. Exact IP matches are enforced by
+# the agent. CIDR entries are documented for operator clarity and future use;
+# today the agent only applies exact allowlist matches.
+VEXYL_ALLOWLIST="127.0.0.1 ::1"
+
+# Existing auth logs are auto-detected from this list.
+VEXYL_AUTH_LOGS="/var/log/auth.log /var/log/secure /var/log/messages"
+
+# Existing web access logs are auto-detected from this list.
+VEXYL_WEB_LOGS="/var/log/nginx/access.log /var/log/nginx/*access.log /var/log/apache2/access.log /var/log/httpd/access_log /var/log/caddy/access.log"
+
+# Existing mail and firewall logs are auto-detected from these lists.
+VEXYL_MAIL_LOGS="/var/log/mail.log /var/log/maillog"
+VEXYL_FIREWALL_LOGS="/var/log/kern.log /var/log/ufw.log"
+VEXYL_VPN_LOGS="/var/log/openvpn.log /var/log/openvpn/*.log /var/log/strongswan.log /var/log/charon.log /var/log/wireguard.log"
+VEXYL_DATABASE_LOGS="/var/log/postgresql/*.log /var/log/mysql/error.log /var/log/mysqld.log /var/log/mariadb/mariadb.log /var/log/mongodb/mongod.log"
+VEXYL_OBJECT_STORAGE_LOGS="/var/log/minio.log /var/log/minio/*.log /var/log/s3/access.log /var/log/s3/*.log /var/log/aws/s3*.log"
+VEXYL_EDGE_LOGS="/var/log/cloudflare.log /var/log/cloudflare/*.log /var/log/cdn/*.log /var/log/edge/*.log /var/log/waf/*.log"
+
+# Number of existing log lines to evaluate in `once` mode.
+VEXYL_BOOTSTRAP_LINES=1500
+
+# Pull shared policy in daemon mode every N seconds when API is configured.
+VEXYL_POLICY_SYNC_SECONDS=300
+VEXYL_HEARTBEAT_SECONDS=300
+
+# Signed policy bundles are used when VEXYL_API_URL, VEXYL_API_TOKEN, and a
+# verifier are configured. Public-key verification is the normal path; the
+# signing secret exists only for legacy private-preview compatibility.
+VEXYL_POLICY_BUNDLE_ENABLED=auto
+VEXYL_POLICY_PUBLIC_KEY_DIR=/etc/vexyl/policy-keys.d
+VEXYL_POLICY_PUBLIC_KEY_FILE=/etc/vexyl/policy-signing-public.pem
+VEXYL_POLICY_REVOKED_KEYS_FILE=/etc/vexyl/revoked-policy-keys.txt
+VEXYL_POLICY_REVOKED_KEY_IDS=
+VEXYL_POLICY_SIGNING_SECRET=
+VEXYL_POLICY_KEY_ID=vexyl-policy-dev-1
+
+# Deception paths should not be linked by real users. Requests to these paths
+# are high-confidence automation or recon signals.
+VEXYL_DECEPTION_PATHS="/.vexyl-canary /__vexyl/trap /vexyl-honey"
+
+# If one source trips this many distinct probe categories inside the scoring
+# window, VEXYL emits ai_assisted_suspected and adds mutation score weight.
+VEXYL_MUTATION_CATEGORY_THRESHOLD=3
+VEXYL_MUTATION_WEIGHT=3
+
+# Local AI threat-intel enrichment for prompt-probe traffic. In auto mode this
+# activates after the local database exists, usually after `vexyl threat seed`.
+VEXYL_AI_INTEL_ENABLED=auto
+VEXYL_AI_INTEL_BIN=vexyl
+VEXYL_AI_INTEL_DB=/var/lib/vexyl/ai_threats.sqlite
+VEXYL_AI_INTEL_AUTO_SEED=false
+VEXYL_AI_INTEL_SIGNAL_SCORE=70
+VEXYL_AI_INTEL_SIGNAL_WEIGHT=4

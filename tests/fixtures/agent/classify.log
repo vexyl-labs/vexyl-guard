@@ -1,0 +1,10 @@
+Jun 25 12:00:01 srv sshd[100]: Failed password for invalid user admin from 198.51.100.23 port 51144 ssh2
+Jun 25 12:00:02 srv sshd[101]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.7 user=root
+Jun 25 12:00:03 srv sshd[102]: Unable to negotiate with 2001:db8::42 port 44322: no matching key exchange method found
+203.0.113.10 - - [25/Jun/2026:12:01:00 +0000] "GET /wp-login.php HTTP/1.1" 404 0 "-" "Mozilla/5.0"
+203.0.113.11 - - [25/Jun/2026:12:01:01 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+203.0.113.12 - - [25/Jun/2026:12:01:02 +0000] "GET /search?q=ignore%20previous%20instructions HTTP/1.1" 200 0 "-" "Mozilla/5.0"
+203.0.113.13 - - [25/Jun/2026:12:01:03 +0000] "GET /.vexyl-canary HTTP/1.1" 404 0 "-" "Mozilla/5.0"
+203.0.113.14 - - [25/Jun/2026:12:01:04 +0000] "GET /admin HTTP/1.1" 403 0 "-" "Mozilla/5.0"
+203.0.113.15 - - [25/Jun/2026:12:01:05 +0000] "GET /health HTTP/1.1" 200 0 "-" "sqlmap/1.7"
+203.0.113.16 - - [25/Jun/2026:12:01:06 +0000] "GET /missing.php HTTP/1.1" 404 0 "-" "Mozilla/5.0"
