@@ -19,6 +19,21 @@ jobs:
       - name: Check shell syntax
         run: |
           bash -n agent/vexyl-guard.sh
+          bash -n packaging/build-packages.sh
+          bash -n packaging/verify-package-contents.sh
 
       - name: Run agent fixtures
         run: tests/run-agent-fixtures.sh
+
+      - name: Build Debian package
+        run: packaging/build-packages.sh --format deb
+
+      - name: Verify package contents
+        run: packaging/verify-package-contents.sh dist/packages/*.deb
+
+      - name: Check public CLI fallback database
+        run: |
+          tmp="$(mktemp -d)"
+          dpkg-deb -x dist/packages/*.deb "$tmp"
+          PYTHONPATH="$tmp/opt/vexyl" "$tmp/usr/bin/vexyl" threat --db "$tmp/var/lib/vexyl/ai_threats.sqlite" seed
+          PYTHONPATH="$tmp/opt/vexyl" "$tmp/usr/bin/vexyl" threat --db "$tmp/var/lib/vexyl/ai_threats.sqlite" search prompt

@@ -46,6 +46,17 @@ VEXYL_MODE=enforce
 
 The agent prefers `nftables`, falls back to `iptables`/`ip6tables`, and stays in monitor behavior when no supported firewall command is available.
 
+## Packages
+
+Build preview Linux packages from the public source tree:
+
+```bash
+packaging/build-packages.sh --format deb
+packaging/build-packages.sh --format rpm
+```
+
+Packages install the agent service, CLI, default monitor-mode configuration, and public trust material. Debian packages are built with `dpkg-deb`; RPM packages require `rpmbuild`.
+
 ## Defensive Defaults
 
 - Monitor mode is the default.
@@ -78,3 +89,5 @@ Vexyl Guard is free to install. Monthly support plans help fund signed releases,
 ```text
 https://vexyl.dev/#plans
 ```
+
+GitHub Sponsors is also enabled for the Vexyl Labs organization.

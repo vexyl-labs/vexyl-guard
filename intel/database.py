@@ -14,6 +14,384 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 SCHEMA_PATH = PACKAGE_DIR / "migrations" / "vexyl_guard_ai_threat_schema.sql"
 SEED_PATH = PACKAGE_DIR / "seeds" / "vexyl_guard_ai_threats_seed.jsonl"
 
+PUBLIC_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS sources (
+  source_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  publisher TEXT,
+  url TEXT,
+  source_type TEXT NOT NULL DEFAULT 'internal',
+  trust_score INTEGER NOT NULL DEFAULT 80,
+  first_seen_utc TEXT,
+  last_checked_utc TEXT,
+  notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS frameworks (
+  framework_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  version TEXT,
+  url TEXT,
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS attack_patterns (
+  attack_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  family TEXT NOT NULL,
+  attack_surface TEXT NOT NULL,
+  lifecycle_stage TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  status TEXT NOT NULL,
+  maturity TEXT NOT NULL,
+  severity INTEGER NOT NULL,
+  likelihood INTEGER NOT NULL,
+  confidence INTEGER NOT NULL,
+  first_seen TEXT,
+  last_seen TEXT,
+  horizon TEXT,
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  updated_at_utc TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS observations (
+  observation_id TEXT PRIMARY KEY,
+  attack_id TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  observed_at TEXT,
+  title TEXT NOT NULL,
+  defensive_takeaway TEXT NOT NULL,
+  confidence INTEGER NOT NULL,
+  notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS indicators (
+  indicator_id TEXT PRIMARY KEY,
+  attack_id TEXT NOT NULL,
+  indicator_type TEXT NOT NULL,
+  pattern TEXT NOT NULL,
+  pattern_is_regex INTEGER NOT NULL DEFAULT 0,
+  safe_for_public INTEGER NOT NULL DEFAULT 1,
+  severity_delta INTEGER NOT NULL DEFAULT 0,
+  context TEXT,
+  false_positive_notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS detection_rules (
+  rule_id TEXT PRIMARY KEY,
+  attack_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  event_schema TEXT NOT NULL,
+  rule_logic_json TEXT NOT NULL,
+  min_score INTEGER NOT NULL,
+  action TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  updated_at_utc TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mitigations (
+  mitigation_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  control_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  implementation_notes TEXT,
+  priority INTEGER NOT NULL DEFAULT 5
+);
+
+CREATE TABLE IF NOT EXISTS attack_mitigation_map (
+  attack_id TEXT NOT NULL,
+  mitigation_id TEXT NOT NULL,
+  effectiveness INTEGER NOT NULL,
+  notes TEXT,
+  PRIMARY KEY (attack_id, mitigation_id)
+);
+
+CREATE TABLE IF NOT EXISTS technique_mappings (
+  mapping_id TEXT PRIMARY KEY,
+  attack_id TEXT NOT NULL,
+  framework_id TEXT NOT NULL,
+  technique_id TEXT,
+  technique_name TEXT,
+  mapping_confidence INTEGER NOT NULL DEFAULT 7,
+  notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS watch_items (
+  watch_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  forecast_summary TEXT NOT NULL,
+  related_attack_ids_json TEXT NOT NULL DEFAULT '[]',
+  horizon TEXT NOT NULL DEFAULT '0-12 months',
+  confidence INTEGER NOT NULL DEFAULT 5,
+  collection_requirements TEXT,
+  updated_at_utc TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS runtime_events (
+  event_id TEXT PRIMARY KEY,
+  event_time_utc TEXT,
+  tenant_id TEXT,
+  user_id_hash TEXT,
+  session_id_hash TEXT,
+  model_provider TEXT,
+  model_name TEXT,
+  input_channel TEXT,
+  data_origin TEXT,
+  retrieved_doc_ids_json TEXT NOT NULL DEFAULT '[]',
+  tool_name TEXT,
+  tool_action TEXT,
+  data_classification TEXT,
+  policy_decision TEXT,
+  risk_score INTEGER,
+  matched_rule_ids_json TEXT NOT NULL DEFAULT '[]',
+  redacted_prompt_excerpt TEXT,
+  redacted_output_excerpt TEXT,
+  notes TEXT
+);
+"""
+
+PUBLIC_SEED_RECORDS = [
+    {
+        "attack_id": "AI-PI-001",
+        "name": "Direct Prompt Injection",
+        "family": "prompt_injection",
+        "attack_surface": "prompt",
+        "lifecycle_stage": "runtime",
+        "summary": "User-controlled instructions attempt to override trusted application or policy instructions.",
+        "severity": 8,
+        "likelihood": 8,
+        "confidence": 8,
+        "tags": ["OWASP:LLM01"],
+        "defensive_signals": ["trusted instruction override language", "system or developer instruction disclosure request"],
+        "default_actions": ["policy_verifier", "human_approval"],
+    },
+    {
+        "attack_id": "AI-PI-002",
+        "name": "Indirect Prompt Injection",
+        "family": "prompt_injection",
+        "attack_surface": "external_content",
+        "lifecycle_stage": "runtime",
+        "summary": "Untrusted retrieved or external content carries instructions that should never inherit system trust.",
+        "severity": 8,
+        "likelihood": 7,
+        "confidence": 8,
+        "tags": ["OWASP:LLM01"],
+        "defensive_signals": ["external content tries to instruct the assistant", "retrieved data requests tool use"],
+        "default_actions": ["signed_trusted_corpus", "policy_verifier"],
+    },
+    {
+        "attack_id": "AI-JB-001",
+        "name": "Jailbreak or Safety Bypass",
+        "family": "policy_bypass",
+        "attack_surface": "prompt",
+        "lifecycle_stage": "runtime",
+        "summary": "Input attempts to bypass established policy, audit, or safety boundaries.",
+        "severity": 7,
+        "likelihood": 7,
+        "confidence": 7,
+        "tags": ["OWASP:LLM01"],
+        "defensive_signals": ["policy bypass request", "unrestricted-role framing"],
+        "default_actions": ["policy_verifier", "human_approval"],
+    },
+    {
+        "attack_id": "AI-RAG-001",
+        "name": "RAG Poisoning",
+        "family": "retrieval_integrity",
+        "attack_surface": "rag",
+        "lifecycle_stage": "ingestion",
+        "summary": "Retrieved content or vector records are manipulated to influence model behavior or output trust.",
+        "severity": 8,
+        "likelihood": 6,
+        "confidence": 7,
+        "tags": ["OWASP:LLM08"],
+        "defensive_signals": ["untrusted corpus", "document provenance mismatch"],
+        "default_actions": ["signed_trusted_corpus", "tenant_isolation"],
+    },
+    {
+        "attack_id": "AI-MEM-001",
+        "name": "Memory or Context Poisoning",
+        "family": "memory_integrity",
+        "attack_surface": "memory",
+        "lifecycle_stage": "runtime",
+        "summary": "Untrusted input attempts to persist instructions, preferences, or state that can affect future sessions.",
+        "severity": 8,
+        "likelihood": 6,
+        "confidence": 7,
+        "tags": ["OWASP_AGENTIC:ASI06"],
+        "defensive_signals": ["persistent instruction request", "memory update from untrusted content"],
+        "default_actions": ["human_approval", "tenant_isolation"],
+    },
+    {
+        "attack_id": "AI-AG-001",
+        "name": "Agent Goal Hijack",
+        "family": "agent_control",
+        "attack_surface": "agent_plan",
+        "lifecycle_stage": "planning",
+        "summary": "A plan attempts to redirect the agent away from the authorized user task or operating scope.",
+        "severity": 8,
+        "likelihood": 6,
+        "confidence": 7,
+        "tags": ["OWASP_AGENTIC:ASI01"],
+        "defensive_signals": ["task redirection", "unauthorized objective change"],
+        "default_actions": ["policy_verifier", "human_approval"],
+    },
+    {
+        "attack_id": "AI-AG-002",
+        "name": "Tool Misuse or Excessive Agency",
+        "family": "agent_control",
+        "attack_surface": "tool_call",
+        "lifecycle_stage": "action",
+        "summary": "Tool access exceeds the task, user scope, or policy for high-impact actions.",
+        "severity": 9,
+        "likelihood": 7,
+        "confidence": 8,
+        "tags": ["OWASP:LLM06", "OWASP_AGENTIC:ASI02"],
+        "defensive_signals": ["irreversible tool action", "broad external write permission"],
+        "default_actions": ["tool_allowlist", "human_approval"],
+    },
+    {
+        "attack_id": "AI-OUT-001",
+        "name": "Insecure Output Handling",
+        "family": "execution_safety",
+        "attack_surface": "output",
+        "lifecycle_stage": "action",
+        "summary": "Generated output is passed into interpreters, shells, browsers, or other execution paths without controls.",
+        "severity": 8,
+        "likelihood": 6,
+        "confidence": 7,
+        "tags": ["OWASP:LLM05"],
+        "defensive_signals": ["generated command execution", "active content handling"],
+        "default_actions": ["sandbox", "policy_verifier"],
+    },
+    {
+        "attack_id": "AI-PRIV-001",
+        "name": "Sensitive Data Disclosure",
+        "family": "data_exposure",
+        "attack_surface": "prompt",
+        "lifecycle_stage": "runtime",
+        "summary": "Input or tool flow creates risk of exposing credentials, internal policy, tenant data, or regulated data.",
+        "severity": 9,
+        "likelihood": 7,
+        "confidence": 8,
+        "tags": ["OWASP:LLM02", "OWASP:LLM07"],
+        "defensive_signals": ["secret request", "cross-tenant data access"],
+        "default_actions": ["scoped_read_only_credentials", "tenant_isolation"],
+    },
+    {
+        "attack_id": "AI-MOD-001",
+        "name": "Model Extraction or Distillation Misuse",
+        "family": "model_protection",
+        "attack_surface": "model_api",
+        "lifecycle_stage": "runtime",
+        "summary": "Repeated model access appears intended to copy behavior, policies, labels, or decision boundaries.",
+        "severity": 7,
+        "likelihood": 5,
+        "confidence": 6,
+        "tags": ["MITRE_ATLAS:model_extraction"],
+        "defensive_signals": ["high-volume label probing", "model behavior cloning"],
+        "default_actions": ["rate_limit", "policy_verifier"],
+    },
+    {
+        "attack_id": "AI-DATA-001",
+        "name": "Training Data or Model Poisoning",
+        "family": "model_integrity",
+        "attack_surface": "training_data",
+        "lifecycle_stage": "ingestion",
+        "summary": "Training, tuning, or feedback data may be manipulated to degrade or backdoor model behavior.",
+        "severity": 9,
+        "likelihood": 5,
+        "confidence": 7,
+        "tags": ["OWASP:LLM04"],
+        "defensive_signals": ["dataset integrity change", "feedback manipulation"],
+        "default_actions": ["data_provenance", "human_approval"],
+    },
+    {
+        "attack_id": "AI-DOS-001",
+        "name": "Unbounded Token, Cost, or Tool Consumption",
+        "family": "resource_exhaustion",
+        "attack_surface": "runtime",
+        "lifecycle_stage": "runtime",
+        "summary": "Prompts, plans, or tool loops risk runaway token spend, fanout, or repeated external actions.",
+        "severity": 7,
+        "likelihood": 7,
+        "confidence": 7,
+        "tags": ["OWASP:LLM10"],
+        "defensive_signals": ["recursive loop", "missing stopping condition"],
+        "default_actions": ["token_budget", "rate_limit"],
+    },
+    {
+        "attack_id": "AI-SUP-001",
+        "name": "AI Supply-Chain Compromise",
+        "family": "supply_chain",
+        "attack_surface": "dependency",
+        "lifecycle_stage": "deployment",
+        "summary": "Models, prompts, adapters, tools, plugins, or datasets change without expected provenance or review.",
+        "severity": 9,
+        "likelihood": 5,
+        "confidence": 7,
+        "tags": ["OWASP:LLM03", "OWASP_AGENTIC:ASI04"],
+        "defensive_signals": ["unsigned AI component", "unreviewed prompt or tool update"],
+        "default_actions": ["provenance_verification", "human_approval"],
+    },
+    {
+        "attack_id": "AI-DARK-001",
+        "name": "Malicious LLM Service Indicator",
+        "family": "hostile_ai_service",
+        "attack_surface": "model_api",
+        "lifecycle_stage": "runtime",
+        "summary": "Signals suggest use of malicious or policy-evading LLM services in activity targeting the host.",
+        "severity": 8,
+        "likelihood": 5,
+        "confidence": 6,
+        "tags": ["vexyl:hostile_ai_service"],
+        "defensive_signals": ["criminal AI service reference", "policy-evading AI wrapper"],
+        "default_actions": ["monitor", "incident_review"],
+    },
+    {
+        "attack_id": "AI-MAL-001",
+        "name": "AI-Integrated Malware Behavior",
+        "family": "malware",
+        "attack_surface": "host_runtime",
+        "lifecycle_stage": "execution",
+        "summary": "Host activity suggests generated or model-guided behavior tied to scripts, tools, or process execution.",
+        "severity": 10,
+        "likelihood": 4,
+        "confidence": 6,
+        "tags": ["vexyl:ai_integrated_malware"],
+        "defensive_signals": ["LLM call followed by execution", "adaptive script behavior"],
+        "default_actions": ["sandbox", "quarantine"],
+    },
+    {
+        "attack_id": "AI-LURE-001",
+        "name": "Fake AI Platform Malware Lure",
+        "family": "social_engineering",
+        "attack_surface": "web",
+        "lifecycle_stage": "delivery",
+        "summary": "Activity resembles AI-branded lure infrastructure, fake tools, or credential capture targeting operators.",
+        "severity": 7,
+        "likelihood": 6,
+        "confidence": 6,
+        "tags": ["vexyl:fake_ai_platform"],
+        "defensive_signals": ["AI tool lure", "lookalike AI domain"],
+        "default_actions": ["monitor", "incident_review"],
+    },
+    {
+        "attack_id": "AI-SOC-001",
+        "name": "AI-Enabled Social Engineering Fraud",
+        "family": "social_engineering",
+        "attack_surface": "identity",
+        "lifecycle_stage": "runtime",
+        "summary": "Synthetic identity, voice, or impersonation signals may be used to pressure high-impact actions.",
+        "severity": 8,
+        "likelihood": 6,
+        "confidence": 6,
+        "tags": ["vexyl:social_engineering"],
+        "defensive_signals": ["synthetic identity pressure", "urgent high-impact request"],
+        "default_actions": ["human_approval", "policy_verifier"],
+    },
+]
+
 SOURCE_ROWS = [
     Source(
         source_id="vexyl-ai-threat-seed-2026",
@@ -134,7 +512,7 @@ def init_db(db_path: str | Path | None = None) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
         conn.execute("PRAGMA foreign_keys = ON")
-        conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        conn.executescript(load_schema_sql())
     return path
 
 
@@ -177,6 +555,8 @@ def seed_db(db_path: str | Path | None = None, seed_path: str | Path | None = No
 
 def load_seed_records(seed_path: str | Path | None = None) -> list[dict[str, Any]]:
     path = Path(seed_path) if seed_path else SEED_PATH
+    if not path.exists() and seed_path is None:
+        return [dict(record) for record in PUBLIC_SEED_RECORDS]
     records: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
@@ -187,6 +567,12 @@ def load_seed_records(seed_path: str | Path | None = None) -> list[dict[str, Any
             validate_seed_record(record, line_number)
             records.append(record)
     return records
+
+
+def load_schema_sql() -> str:
+    if SCHEMA_PATH.exists():
+        return SCHEMA_PATH.read_text(encoding="utf-8")
+    return PUBLIC_SCHEMA_SQL
 
 
 def validate_seed_file(seed_path: str | Path | None = None) -> int:
