@@ -435,7 +435,7 @@ def insert_watch_item(conn: sqlite3.Connection, record: dict[str, Any]) -> int:
             json.dumps([record["attack_id"]]),
             record.get("horizon") or "0-12 months",
             int(record.get("confidence", 6)),
-            "Track vendor, framework, abuse telemetry, and incident reports for defensive indicators.",
+            "Track vendor, framework, threat reporting, and incident reports for defensive indicators.",
             utc_now_iso(),
         ),
     )

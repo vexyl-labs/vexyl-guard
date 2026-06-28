@@ -67,6 +67,10 @@ Do not open public issues that include active secrets, private logs, runnable ex
 
 Private vulnerability reports: `security@vexyl.dev`
 
+## License
+
+Vexyl Guard is licensed under the Apache License 2.0. See `LICENSE`.
+
 ## Support
 
 Vexyl Guard is free to install. Monthly support plans help fund signed releases, packaging, hosted services, and continued defensive research:

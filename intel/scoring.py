@@ -171,7 +171,7 @@ RULE_TERMS: dict[str, tuple[str, tuple[str, ...]]] = {
             "fine tuning corpus",
             "dataset poisoning",
             "model poisoning",
-            "feedback abuse",
+            "feedback manipulation",
             "backdoor behavior",
         ),
     ),
