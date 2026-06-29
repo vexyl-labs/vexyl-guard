@@ -78,9 +78,9 @@ Maintainers can configure `VEXYL_PLATFORM_PROMOTION_TOKEN` so the release workfl
 
 ## Release Readiness
 
-Maintainers should run the `Release Preflight` workflow before cutting a release. It accepts the proposed version and release notes, runs the same version bump, package, repository, and note validation checks, then stops before creating a commit, tag, push, or release dispatch.
+Maintainers must run the `Release Preflight` workflow before cutting a release. It accepts the proposed version and release notes, runs the same version bump, package, repository, and note validation checks, then stops before creating a commit, tag, push, or release dispatch.
 
-After preflight passes, cut the release from GitHub Actions with the `Prepare Release` workflow. It accepts the same release notes, bumps `agent/vexyl-guard.sh` and `pyproject.toml`, runs the package and repository checks again, commits the version bump, creates an annotated `vX.Y.Z` tag, pushes it, and dispatches the signed `Release` workflow with those notes.
+After preflight passes on the same commit, cut the release from GitHub Actions with the `Prepare Release` workflow. It refuses to run without a successful matching preflight, accepts the same release notes, bumps `agent/vexyl-guard.sh` and `pyproject.toml`, runs the package and repository checks again, commits the version bump, creates an annotated `vX.Y.Z` tag, pushes it, and dispatches the signed `Release` workflow with those notes.
 
 Local equivalent:
 

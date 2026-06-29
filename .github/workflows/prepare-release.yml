@@ -40,6 +40,39 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg jq ripgrep rpm
 
+      - name: Require matching release preflight
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          raw_version="${{ inputs.version }}"
+          version="${raw_version#v}"
+          current_sha="$(git rev-parse HEAD)"
+
+          preflight_run="$(
+            gh run list \
+              --workflow "Release Preflight" \
+              --branch "${{ github.ref_name }}" \
+              --json conclusion,databaseId,displayTitle,headSha,status,url \
+              --limit 50 \
+              | jq -r \
+                --arg plain_title "Release Preflight $version" \
+                --arg tag_title "Release Preflight v$version" \
+                --arg current_sha "$current_sha" \
+                '[.[] | select(
+                  (.displayTitle == $plain_title or .displayTitle == $tag_title) and
+                  .headSha == $current_sha and
+                  .status == "completed" and
+                  .conclusion == "success"
+                )] | sort_by(.databaseId) | last | @base64'
+          )"
+
+          if [ -z "$preflight_run" ]; then
+            printf 'No successful Release Preflight run found for %s on commit %s. Run Release Preflight first, then rerun Prepare Release.\\n' "$raw_version" "$current_sha" >&2
+            exit 1
+          fi
+
+          printf 'Using preflight run: %s\\n' "$(printf '%s' "$preflight_run" | base64 -d | jq -r .url)"
+
       - name: Configure release bot identity
         run: |
           git config user.name "vexyl-release-bot"
