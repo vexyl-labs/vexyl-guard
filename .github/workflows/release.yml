@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish, for example v0.2.8"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm file openssl
+
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="${{ inputs.tag }}"
+          fi
+
+          case "$tag" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *)
+              printf 'Release tag must look like v0.2.8, got: %s\n' "$tag" >&2
+              exit 1
+              ;;
+          esac
+
+          version="${tag#v}"
+          agent_version="$(sed -n 's/^VERSION="\([^"]*\)".*/\1/p' agent/vexyl-guard.sh | head -n 1)"
+          project_version="$(sed -n 's/^version = "\([^"]*\)".*/\1/p' pyproject.toml | head -n 1)"
+
+          if [ "$agent_version" != "$version" ]; then
+            printf 'Tag %s does not match agent version %s.\n' "$tag" "$agent_version" >&2
+            exit 1
+          fi
+
+          if [ "$project_version" != "$version" ]; then
+            printf 'Tag %s does not match pyproject version %s.\n' "$tag" "$project_version" >&2
+            exit 1
+          fi
+
+          git rev-parse -q --verify "refs/tags/$tag" >/dev/null || {
+            printf 'Tag does not exist in the checked out repository: %s\n' "$tag" >&2
+            exit 1
+          }
+
+          printf 'tag=%s\n' "$tag" >>"$GITHUB_OUTPUT"
+          printf 'version=%s\n' "$version" >>"$GITHUB_OUTPUT"
+
+      - name: Check shell syntax
+        run: |
+          bash -n agent/vexyl-guard.sh
+          bash -n packaging/build-packages.sh
+          bash -n packaging/verify-package-contents.sh
+
+      - name: Run agent fixtures
+        run: tests/run-agent-fixtures.sh
+
+      - name: Build packages
+        run: packaging/build-packages.sh --format all --version "${{ steps.meta.outputs.version }}"
+
+      - name: Verify package contents
+        run: packaging/verify-package-contents.sh dist/packages/*
+
+      - name: Check public CLI fallback database
+        run: |
+          tmp="$(mktemp -d)"
+          dpkg-deb -x dist/packages/*.deb "$tmp"
+          PYTHONPATH="$tmp/opt/vexyl" "$tmp/usr/bin/vexyl" threat --db "$tmp/var/lib/vexyl/ai_threats.sqlite" seed
+          PYTHONPATH="$tmp/opt/vexyl" "$tmp/usr/bin/vexyl" threat --db "$tmp/var/lib/vexyl/ai_threats.sqlite" search prompt
+
+      - name: Generate checksums
+        run: |
+          cd dist/packages
+          find . -maxdepth 1 -type f \
+            ! -name 'SHA256SUMS' \
+            ! -name 'SHA256SUMS.sig' \
+            ! -name 'release-signing-public.pem' \
+            -printf '%f\0' \
+            | sort -z \
+            | xargs -0 sha256sum > SHA256SUMS
+          cp ../../config/release-signing-public.pem release-signing-public.pem
+          sha256sum -c SHA256SUMS
+
+      - name: Sign checksums
+        env:
+          VEXYL_RELEASE_SIGNING_PRIVATE_KEY_PEM: ${{ secrets.VEXYL_RELEASE_SIGNING_PRIVATE_KEY_PEM }}
+        run: |
+          if [ -z "$VEXYL_RELEASE_SIGNING_PRIVATE_KEY_PEM" ]; then
+            printf 'Missing VEXYL_RELEASE_SIGNING_PRIVATE_KEY_PEM secret.\n' >&2
+            exit 1
+          fi
+
+          private_key="$RUNNER_TEMP/vexyl-release-private.pem"
+          printf '%s\n' "$VEXYL_RELEASE_SIGNING_PRIVATE_KEY_PEM" >"$private_key"
+          chmod 0600 "$private_key"
+
+          openssl dgst -sha256 \
+            -sign "$private_key" \
+            -out dist/packages/SHA256SUMS.sig \
+            dist/packages/SHA256SUMS
+
+          openssl dgst -sha256 \
+            -verify config/release-signing-public.pem \
+            -signature dist/packages/SHA256SUMS.sig \
+            dist/packages/SHA256SUMS
+
+      - name: Attest package provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/packages/*"
+
+      - name: Write release notes
+        run: |
+          cat >RELEASE_NOTES.md <<EOF
+          Vexyl Guard ${{ steps.meta.outputs.tag }} package release.
+
+          This release publishes Linux package artifacts for operators who prefer package-managed installs:
+
+          - Debian/Ubuntu package: vexyl-guard_${{ steps.meta.outputs.version }}-1_all.deb
+          - RPM package: vexyl-guard-${{ steps.meta.outputs.version }}-1.noarch.rpm
+
+          Verify downloads with SHA256SUMS, SHA256SUMS.sig, and release-signing-public.pem. Start in monitor mode before enabling local enforcement.
+          EOF
+          sed -i 's/^          //' RELEASE_NOTES.md
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.meta.outputs.tag }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/packages/* --clobber
+            gh release edit "$tag" --title "Vexyl Guard $tag" --notes-file RELEASE_NOTES.md --latest
+          else
+            gh release create "$tag" dist/packages/* --title "Vexyl Guard $tag" --notes-file RELEASE_NOTES.md --latest
+          fi

@@ -16,6 +16,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install package tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm file
+
       - name: Check shell syntax
         run: |
           bash -n agent/vexyl-guard.sh
@@ -25,11 +30,11 @@ jobs:
       - name: Run agent fixtures
         run: tests/run-agent-fixtures.sh
 
-      - name: Build Debian package
-        run: packaging/build-packages.sh --format deb
+      - name: Build packages
+        run: packaging/build-packages.sh --format all
 
       - name: Verify package contents
-        run: packaging/verify-package-contents.sh dist/packages/*.deb
+        run: packaging/verify-package-contents.sh dist/packages/*
 
       - name: Check public CLI fallback database
         run: |
