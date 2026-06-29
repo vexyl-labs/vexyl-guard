@@ -48,6 +48,42 @@ The agent prefers `nftables`, falls back to `iptables`/`ip6tables`, and stays in
 
 ## Packages
 
+Install the current package release from GitHub when you want the agent tracked by the host package manager.
+
+Debian / Ubuntu:
+
+```bash
+base=https://github.com/vexyl-labs
+repo=vexyl-guard
+rel=v0.2.8
+pkg=vexyl-guard_0.2.8-1_all.deb
+path=releases/download/$rel
+url="$base/$repo/$path"
+curl -LO "$url/$pkg"
+curl -LO "$url/SHA256SUMS"
+sha256sum -c --ignore-missing \
+  SHA256SUMS
+sudo apt install "./$pkg"
+sudo systemctl start vexyl-guard
+```
+
+Fedora / RHEL:
+
+```bash
+base=https://github.com/vexyl-labs
+repo=vexyl-guard
+rel=v0.2.8
+pkg=vexyl-guard-0.2.8-1.noarch.rpm
+path=releases/download/$rel
+url="$base/$repo/$path"
+curl -LO "$url/$pkg"
+curl -LO "$url/SHA256SUMS"
+sha256sum -c --ignore-missing \
+  SHA256SUMS
+sudo dnf install "./$pkg"
+sudo systemctl start vexyl-guard
+```
+
 Build preview Linux packages from the public source tree:
 
 ```bash
@@ -90,4 +126,4 @@ Vexyl Guard is free to install. Monthly support plans help fund signed releases,
 https://vexyl.dev/#plans
 ```
 
-GitHub Sponsors is also enabled for the Vexyl Labs organization.
+GitHub Sponsors is also enabled for the Vexyl Labs profile.
