@@ -104,6 +104,16 @@ Packages install the agent service, CLI, default monitor-mode configuration, and
 CI and release readiness also run containerized APT and DNF install smoke tests from the generated repositories. These require Docker and verify package-manager installs before a release is cut.
 The scheduled `Live Install Canary` workflow runs the same kind of install check against the production `https://vexyl.dev/repo` repositories every six hours to catch publishing or CDN drift after promotion.
 
+Workflow failure emails are sent through Resend when these GitHub Actions secrets are configured:
+
+```bash
+RESEND_API_KEY
+VEXYL_ALERT_FROM
+VEXYL_ALERT_RECIPIENTS
+```
+
+`VEXYL_ALERT_RECIPIENTS` accepts comma-separated operator email addresses. `VEXYL_ALERT_REPLY_TO` can also be set as an optional reply-to address.
+
 ## Defensive Defaults
 
 - Monitor mode is the default.

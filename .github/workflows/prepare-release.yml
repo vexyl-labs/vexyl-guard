@@ -140,3 +140,12 @@ jobs:
           }
 
           gh run watch "$release_run" --exit-status
+
+      - name: Email failure alert
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VEXYL_ALERT_FROM: ${{ secrets.VEXYL_ALERT_FROM }}
+          VEXYL_ALERT_RECIPIENTS: ${{ secrets.VEXYL_ALERT_RECIPIENTS }}
+          VEXYL_ALERT_REPLY_TO: ${{ secrets.VEXYL_ALERT_REPLY_TO }}
+        run: scripts/notify-workflow-failure.sh

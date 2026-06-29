@@ -31,6 +31,7 @@ jobs:
           bash -n packaging/smoke-install-repositories.sh
           bash -n packaging/verify-package-contents.sh
           bash -n packaging/verify-repositories.sh
+          bash -n scripts/notify-workflow-failure.sh
           bash -n scripts/prepare-release.sh
 
       - name: Run agent fixtures
@@ -85,3 +86,12 @@ jobs:
           dpkg-deb -x dist/packages/*.deb "$tmp"
           PYTHONPATH="$tmp/opt/vexyl" "$tmp/usr/bin/vexyl" threat --db "$tmp/var/lib/vexyl/ai_threats.sqlite" seed
           PYTHONPATH="$tmp/opt/vexyl" "$tmp/usr/bin/vexyl" threat --db "$tmp/var/lib/vexyl/ai_threats.sqlite" search prompt
+
+      - name: Email failure alert
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VEXYL_ALERT_FROM: ${{ secrets.VEXYL_ALERT_FROM }}
+          VEXYL_ALERT_RECIPIENTS: ${{ secrets.VEXYL_ALERT_RECIPIENTS }}
+          VEXYL_ALERT_REPLY_TO: ${{ secrets.VEXYL_ALERT_REPLY_TO }}
+        run: scripts/notify-workflow-failure.sh

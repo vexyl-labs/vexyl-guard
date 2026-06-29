@@ -275,6 +275,7 @@ run_checks() {
   bash -n "$ROOT_DIR/packaging/smoke-install-repositories.sh"
   bash -n "$ROOT_DIR/packaging/verify-package-contents.sh"
   bash -n "$ROOT_DIR/packaging/verify-repositories.sh"
+  bash -n "$ROOT_DIR/scripts/notify-workflow-failure.sh"
   bash -n "$ROOT_DIR/scripts/prepare-release.sh"
 
   log "running agent fixtures"

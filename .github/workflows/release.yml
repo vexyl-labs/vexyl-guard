@@ -85,6 +85,8 @@ jobs:
           bash -n packaging/build-packages.sh
           bash -n packaging/build-repositories.sh
           bash -n packaging/sign-rpm-packages.sh
+          bash -n packaging/smoke-install-repositories.sh
+          bash -n scripts/notify-workflow-failure.sh
           bash -n packaging/verify-package-contents.sh
           bash -n packaging/verify-repositories.sh
 
@@ -127,6 +129,7 @@ jobs:
             --signing-key "$repo_private_key"
 
           packaging/verify-repositories.sh dist/repositories dist/repositories/vexyl-packages.asc
+          packaging/smoke-install-repositories.sh dist/repositories
 
           tar -C dist/repositories \
             -czf "dist/packages/vexyl-package-repositories-${{ steps.meta.outputs.tag }}.tar.gz" .
@@ -248,3 +251,12 @@ jobs:
             -f client_payload[tag]="${{ steps.meta.outputs.tag }}" \
             -f client_payload[source_repo]="${{ github.repository }}" \
             -f client_payload[release_run_id]="${{ github.run_id }}"
+
+      - name: Email failure alert
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VEXYL_ALERT_FROM: ${{ secrets.VEXYL_ALERT_FROM }}
+          VEXYL_ALERT_RECIPIENTS: ${{ secrets.VEXYL_ALERT_RECIPIENTS }}
+          VEXYL_ALERT_REPLY_TO: ${{ secrets.VEXYL_ALERT_REPLY_TO }}
+        run: scripts/notify-workflow-failure.sh
