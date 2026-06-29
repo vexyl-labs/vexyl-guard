@@ -1,0 +1,23 @@
+name: Live Install Canary
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-install-canary
+  cancel-in-progress: false
+
+jobs:
+  live-install-canary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run live package-manager install canaries
+        run: packaging/smoke-install-live-repositories.sh

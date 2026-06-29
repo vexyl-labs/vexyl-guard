@@ -102,6 +102,7 @@ packaging/build-repositories.sh --packages-dir dist/packages
 
 Packages install the agent service, CLI, default monitor-mode configuration, and public trust material. Debian packages are built with `dpkg-deb`; RPM packages require `rpmbuild`.
 CI and release readiness also run containerized APT and DNF install smoke tests from the generated repositories. These require Docker and verify package-manager installs before a release is cut.
+The scheduled `Live Install Canary` workflow runs the same kind of install check against the production `https://vexyl.dev/repo` repositories every six hours to catch publishing or CDN drift after promotion.
 
 ## Defensive Defaults
 

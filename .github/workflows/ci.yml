@@ -27,6 +27,7 @@ jobs:
           bash -n packaging/build-packages.sh
           bash -n packaging/build-repositories.sh
           bash -n packaging/sign-rpm-packages.sh
+          bash -n packaging/smoke-install-live-repositories.sh
           bash -n packaging/smoke-install-repositories.sh
           bash -n packaging/verify-package-contents.sh
           bash -n packaging/verify-repositories.sh
