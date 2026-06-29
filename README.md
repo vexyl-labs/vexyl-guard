@@ -74,6 +74,8 @@ sudo systemctl start vexyl-guard
 
 Manual package downloads are still available from the GitHub release page. Verify release downloads with `SHA256SUMS`, `SHA256SUMS.sig`, and `release-signing-public.pem`.
 
+Maintainers can configure `VEXYL_PLATFORM_PROMOTION_TOKEN` so the release workflow dispatches the private platform promotion after signed assets are published.
+
 Build preview Linux packages from the public source tree:
 
 ```bash
