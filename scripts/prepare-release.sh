@@ -272,6 +272,7 @@ run_checks() {
   bash -n "$ROOT_DIR/packaging/build-packages.sh"
   bash -n "$ROOT_DIR/packaging/build-repositories.sh"
   bash -n "$ROOT_DIR/packaging/sign-rpm-packages.sh"
+  bash -n "$ROOT_DIR/packaging/smoke-install-repositories.sh"
   bash -n "$ROOT_DIR/packaging/verify-package-contents.sh"
   bash -n "$ROOT_DIR/packaging/verify-repositories.sh"
   bash -n "$ROOT_DIR/scripts/prepare-release.sh"
@@ -296,6 +297,13 @@ run_checks() {
   "$ROOT_DIR/packaging/verify-repositories.sh" \
     "$ROOT_DIR/dist/repositories" \
     "$ROOT_DIR/dist/repositories/vexyl-packages.asc"
+
+  if [ "${VEXYL_SKIP_INSTALL_SMOKE:-false}" = "true" ]; then
+    log "skipping package-manager install smoke tests"
+  else
+    log "running package-manager install smoke tests"
+    "$ROOT_DIR/packaging/smoke-install-repositories.sh" "$ROOT_DIR/dist/repositories"
+  fi
 
   log "checking packaged CLI fallback database"
   tmp_extract="$(mktemp -d)"

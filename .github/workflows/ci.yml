@@ -27,6 +27,7 @@ jobs:
           bash -n packaging/build-packages.sh
           bash -n packaging/build-repositories.sh
           bash -n packaging/sign-rpm-packages.sh
+          bash -n packaging/smoke-install-repositories.sh
           bash -n packaging/verify-package-contents.sh
           bash -n packaging/verify-repositories.sh
           bash -n scripts/prepare-release.sh
@@ -73,6 +74,9 @@ jobs:
 
       - name: Verify package repositories
         run: packaging/verify-repositories.sh dist/repositories dist/repositories/vexyl-packages.asc
+
+      - name: Smoke package-manager installs
+        run: packaging/smoke-install-repositories.sh dist/repositories
 
       - name: Check public CLI fallback database
         run: |
