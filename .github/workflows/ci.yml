@@ -26,6 +26,7 @@ jobs:
           bash -n agent/vexyl-guard.sh
           bash -n packaging/build-packages.sh
           bash -n packaging/build-repositories.sh
+          bash -n packaging/sign-rpm-packages.sh
           bash -n packaging/verify-package-contents.sh
           bash -n packaging/verify-repositories.sh
 
@@ -59,6 +60,10 @@ jobs:
           GNUPGHOME="$tmp_gnupg" gpg --batch --generate-key "$key_batch"
           GNUPGHOME="$tmp_gnupg" gpg --armor --export-secret-keys security@vexyl.dev >"$repo_private_key"
           rm -rf "$tmp_gnupg"
+
+          packaging/sign-rpm-packages.sh \
+            --signing-key "$repo_private_key" \
+            dist/packages/*.rpm
 
           packaging/build-repositories.sh \
             --packages-dir dist/packages \

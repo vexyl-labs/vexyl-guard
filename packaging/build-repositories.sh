@@ -158,6 +158,9 @@ sign_file() {
 }
 
 write_configs() {
+  rpm_gpgcheck="0"
+  [ -n "$GPG_FINGERPRINT" ] && rpm_gpgcheck="1"
+
   cat >"$OUTPUT_DIR/vexyl.sources" <<EOF
 Types: deb
 URIs: $BASE_URL/apt
@@ -172,7 +175,7 @@ EOF
 name=Vexyl Guard
 baseurl=$BASE_URL/rpm
 enabled=1
-gpgcheck=0
+gpgcheck=$rpm_gpgcheck
 repo_gpgcheck=1
 gpgkey=$BASE_URL/vexyl-packages.asc
 metadata_expire=1h

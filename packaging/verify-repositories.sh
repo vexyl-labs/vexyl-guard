@@ -39,7 +39,11 @@ gzip -t "$REPO_DIR/apt/dists/stable/main/binary-amd64/Packages.gz"
 grep -q '^Package: vexyl-guard$' "$REPO_DIR/apt/dists/stable/main/binary-amd64/Packages"
 grep -q '^Filename: pool/main/v/vexyl-guard/vexyl-guard_' "$REPO_DIR/apt/dists/stable/main/binary-amd64/Packages"
 find "$REPO_DIR/apt/pool/main/v/vexyl-guard" -maxdepth 1 -type f -name 'vexyl-guard_*_all.deb' | grep -q .
-find "$REPO_DIR/rpm/packages" -maxdepth 1 -type f -name 'vexyl-guard-*.noarch.rpm' | grep -q .
+rpm_package="$(find "$REPO_DIR/rpm/packages" -maxdepth 1 -type f -name 'vexyl-guard-*.noarch.rpm' | sort | head -n 1)"
+[ -n "$rpm_package" ] || {
+  printf 'Missing RPM package in repository.\n' >&2
+  exit 1
+}
 find "$REPO_DIR/rpm/repodata" -maxdepth 1 -type f -name '*primary.xml.gz' | grep -q .
 
 if [ -n "$PUBLIC_KEY" ]; then
@@ -59,6 +63,19 @@ if [ -n "$PUBLIC_KEY" ]; then
   GNUPGHOME="$tmp" gpg --batch --verify \
     "$REPO_DIR/rpm/repodata/repomd.xml.asc" \
     "$REPO_DIR/rpm/repodata/repomd.xml" >/dev/null
+
+  rpmdb="$tmp/rpmdb"
+  mkdir -p "$rpmdb"
+  rpm --define "_dbpath $rpmdb" --import "$PUBLIC_KEY"
+  checksig_output="$(rpm --define "_dbpath $rpmdb" --checksig -v "$rpm_package" || true)"
+  printf '%s\n' "$checksig_output" | grep -Eq 'Signature, key ID [0-9A-Fa-f]+: OK' || {
+    printf 'RPM package signature verification failed: %s\n' "$rpm_package" >&2
+    exit 1
+  }
+  grep -q '^gpgcheck=1$' "$REPO_DIR/vexyl.repo" || {
+    printf 'Signed repository config must enable RPM package signature checks.\n' >&2
+    exit 1
+  }
 fi
 
 printf 'Verified package repositories: %s\n' "$REPO_DIR"

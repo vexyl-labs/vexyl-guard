@@ -20,7 +20,7 @@ for package in "$@"; do
         printf 'rpm is required to inspect %s\n' "$package" >&2
         exit 1
       }
-      contents="$(rpm -qpl "$package")"
+      contents="$(rpm --nosignature -qpl "$package")"
       ;;
     *)
       printf 'Unsupported package type: %s\n' "$package" >&2

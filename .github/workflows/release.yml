@@ -79,6 +79,7 @@ jobs:
           bash -n agent/vexyl-guard.sh
           bash -n packaging/build-packages.sh
           bash -n packaging/build-repositories.sh
+          bash -n packaging/sign-rpm-packages.sh
           bash -n packaging/verify-package-contents.sh
           bash -n packaging/verify-repositories.sh
 
@@ -110,6 +111,10 @@ jobs:
           repo_private_key="$RUNNER_TEMP/vexyl-package-repo-private.asc"
           printf '%s\n' "$VEXYL_PACKAGE_REPO_SIGNING_PRIVATE_KEY_ASC" >"$repo_private_key"
           chmod 0600 "$repo_private_key"
+
+          packaging/sign-rpm-packages.sh \
+            --signing-key "$repo_private_key" \
+            dist/packages/*.rpm
 
           packaging/build-repositories.sh \
             --packages-dir dist/packages \
@@ -175,7 +180,7 @@ jobs:
           - Signed APT/YUM repository bundle: vexyl-package-repositories-${{ steps.meta.outputs.tag }}.tar.gz
           - Package repository public key: vexyl-package-repo-signing-public.asc
 
-          Verify downloads with SHA256SUMS, SHA256SUMS.sig, and release-signing-public.pem. Start in monitor mode before enabling local enforcement.
+          RPM packages are signed with the package repository key. Verify downloads with SHA256SUMS, SHA256SUMS.sig, and release-signing-public.pem. Start in monitor mode before enabling local enforcement.
           EOF
           sed -i 's/^          //' RELEASE_NOTES.md
 

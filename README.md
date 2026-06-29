@@ -79,6 +79,7 @@ Build preview Linux packages from the public source tree:
 ```bash
 packaging/build-packages.sh --format deb
 packaging/build-packages.sh --format rpm
+packaging/sign-rpm-packages.sh --signing-key repo-private.asc dist/packages/*.rpm
 packaging/build-repositories.sh --packages-dir dist/packages
 ```
 
