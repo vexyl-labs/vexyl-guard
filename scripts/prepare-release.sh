@@ -8,6 +8,7 @@ BRANCH="${VEXYL_RELEASE_BRANCH:-main}"
 DO_COMMIT=false
 DO_TAG=false
 DO_PUSH=false
+DRY_RUN=false
 ALLOW_DIRTY=false
 RELEASE_NOTES_FILE=""
 TMP_PATHS=()
@@ -22,6 +23,7 @@ Options:
   --commit           Commit the version bump after checks pass.
   --tag              Create an annotated vVERSION tag after checks pass.
   --push             Push the release commit and tag to origin.
+  --dry-run          Run release checks without committing, tagging, or pushing.
   --branch NAME      Branch to push when --push is used. Default: main.
   --notes-file FILE  Markdown release notes for the annotated tag.
   --allow-dirty      Allow tracked working-tree changes before the script runs.
@@ -68,6 +70,9 @@ parse_args() {
       --push)
         DO_PUSH=true
         ;;
+      --dry-run)
+        DRY_RUN=true
+        ;;
       --branch)
         shift
         [ "${1:-}" ] || die "--branch requires a value"
@@ -91,6 +96,14 @@ parse_args() {
     esac
     shift
   done
+}
+
+assert_mode() {
+  if [ "$DRY_RUN" = true ]; then
+    if [ "$DO_COMMIT" = true ] || [ "$DO_TAG" = true ] || [ "$DO_PUSH" = true ]; then
+      die "--dry-run cannot be combined with --commit, --tag, or --push"
+    fi
+  fi
 }
 
 normalize_version() {
@@ -230,6 +243,11 @@ release_notes_file() {
   printf '%s\n' "$notes_file"
 }
 
+validate_release_notes() {
+  [ -n "$RELEASE_NOTES_FILE" ] || return 0
+  release_notes_file >/dev/null
+}
+
 run_checks() {
   local repo_private_key tmp_extract
   log "checking required tools"
@@ -318,16 +336,22 @@ push_release() {
 
 main() {
   parse_args "$@"
+  assert_mode
   normalize_version
   cd "$ROOT_DIR"
   assert_clean_tree
   assert_release_is_new
+  validate_release_notes
   update_versions
   run_checks
   commit_release
   tag_release
   push_release
-  log "release readiness complete for $TAG"
+  if [ "$DRY_RUN" = true ]; then
+    log "release dry run complete for $TAG; no commit, tag, push, or release dispatch was created"
+  else
+    log "release readiness complete for $TAG"
+  fi
 }
 
 main "$@"
