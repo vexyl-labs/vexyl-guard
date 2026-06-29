@@ -20,6 +20,7 @@ tests/run-intel-tests.py
 .vexyl-state/
 .vexyl-*-private.pem
 .vexyl-*-private.der
+.vexyl-*-private.asc
 *.sqlite
 *.sqlite3
 *.db

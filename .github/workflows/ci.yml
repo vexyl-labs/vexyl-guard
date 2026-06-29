@@ -19,13 +19,15 @@ jobs:
       - name: Install package tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm file
+          sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg rpm
 
       - name: Check shell syntax
         run: |
           bash -n agent/vexyl-guard.sh
           bash -n packaging/build-packages.sh
+          bash -n packaging/build-repositories.sh
           bash -n packaging/verify-package-contents.sh
+          bash -n packaging/verify-repositories.sh
 
       - name: Run agent fixtures
         run: tests/run-agent-fixtures.sh
@@ -35,6 +37,36 @@ jobs:
 
       - name: Verify package contents
         run: packaging/verify-package-contents.sh dist/packages/*
+
+      - name: Build package repositories
+        run: |
+          tmp_gnupg="$(mktemp -d)"
+          chmod 0700 "$tmp_gnupg"
+          key_batch="$RUNNER_TEMP/vexyl-repo-key.batch"
+          repo_private_key="$RUNNER_TEMP/vexyl-package-repo-private.asc"
+
+          cat >"$key_batch" <<'EOF'
+          Key-Type: RSA
+          Key-Length: 2048
+          Name-Real: Vexyl CI Package Repository
+          Name-Email: security@vexyl.dev
+          Expire-Date: 0
+          %no-protection
+          %commit
+          EOF
+          sed -i 's/^          //' "$key_batch"
+
+          GNUPGHOME="$tmp_gnupg" gpg --batch --generate-key "$key_batch"
+          GNUPGHOME="$tmp_gnupg" gpg --armor --export-secret-keys security@vexyl.dev >"$repo_private_key"
+          rm -rf "$tmp_gnupg"
+
+          packaging/build-repositories.sh \
+            --packages-dir dist/packages \
+            --output-dir dist/repositories \
+            --signing-key "$repo_private_key"
+
+      - name: Verify package repositories
+        run: packaging/verify-repositories.sh dist/repositories dist/repositories/vexyl-packages.asc
 
       - name: Check public CLI fallback database
         run: |

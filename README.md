@@ -48,47 +48,38 @@ The agent prefers `nftables`, falls back to `iptables`/`ip6tables`, and stays in
 
 ## Packages
 
-Install the current package release from GitHub when you want the agent tracked by the host package manager.
+Use the signed package repository when you want the agent tracked by the host package manager.
 
 Debian / Ubuntu:
 
 ```bash
-base=https://github.com/vexyl-labs
-repo=vexyl-guard
-rel=v0.2.8
-pkg=vexyl-guard_0.2.8-1_all.deb
-path=releases/download/$rel
-url="$base/$repo/$path"
-curl -LO "$url/$pkg"
-curl -LO "$url/SHA256SUMS"
-sha256sum -c --ignore-missing \
-  SHA256SUMS
-sudo apt install "./$pkg"
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://vexyl.dev/repo/vexyl-packages.asc \
+  | sudo tee /etc/apt/keyrings/vexyl-packages.asc >/dev/null
+curl -fsSL https://vexyl.dev/repo/vexyl.sources \
+  | sudo tee /etc/apt/sources.list.d/vexyl.sources >/dev/null
+sudo apt update
+sudo apt install vexyl-guard
 sudo systemctl start vexyl-guard
 ```
 
 Fedora / RHEL:
 
 ```bash
-base=https://github.com/vexyl-labs
-repo=vexyl-guard
-rel=v0.2.8
-pkg=vexyl-guard-0.2.8-1.noarch.rpm
-path=releases/download/$rel
-url="$base/$repo/$path"
-curl -LO "$url/$pkg"
-curl -LO "$url/SHA256SUMS"
-sha256sum -c --ignore-missing \
-  SHA256SUMS
-sudo dnf install "./$pkg"
+sudo curl -fsSL https://vexyl.dev/repo/vexyl.repo \
+  -o /etc/yum.repos.d/vexyl.repo
+sudo dnf install vexyl-guard
 sudo systemctl start vexyl-guard
 ```
+
+Manual package downloads are still available from the GitHub release page. Verify release downloads with `SHA256SUMS`, `SHA256SUMS.sig`, and `release-signing-public.pem`.
 
 Build preview Linux packages from the public source tree:
 
 ```bash
 packaging/build-packages.sh --format deb
 packaging/build-packages.sh --format rpm
+packaging/build-repositories.sh --packages-dir dist/packages
 ```
 
 Packages install the agent service, CLI, default monitor-mode configuration, and public trust material. Debian packages are built with `dpkg-deb`; RPM packages require `rpmbuild`.
