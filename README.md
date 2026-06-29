@@ -76,6 +76,18 @@ Manual package downloads are still available from the GitHub release page. Verif
 
 Maintainers can configure `VEXYL_PLATFORM_PROMOTION_TOKEN` so the release workflow dispatches the private platform promotion after signed assets are published.
 
+## Release Readiness
+
+Maintainers can cut a release from GitHub Actions with the `Prepare Release` workflow. It bumps `agent/vexyl-guard.sh` and `pyproject.toml`, runs the package and repository checks, commits the version bump, creates the `vX.Y.Z` tag, pushes it, and dispatches the signed release workflow.
+
+Local equivalent:
+
+```bash
+scripts/prepare-release.sh --version 0.2.9 --commit --tag --push
+```
+
+The signed release workflow publishes GitHub assets. The private platform repository then promotes the latest signed package repository to `vexyl.dev`.
+
 Build preview Linux packages from the public source tree:
 
 ```bash

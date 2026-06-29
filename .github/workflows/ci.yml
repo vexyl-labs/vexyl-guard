@@ -29,6 +29,7 @@ jobs:
           bash -n packaging/sign-rpm-packages.sh
           bash -n packaging/verify-package-contents.sh
           bash -n packaging/verify-repositories.sh
+          bash -n scripts/prepare-release.sh
 
       - name: Run agent fixtures
         run: tests/run-agent-fixtures.sh

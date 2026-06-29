@@ -1,0 +1,83 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version to create, for example 0.2.9"
+        required: true
+        type: string
+      dispatch_release:
+        description: "Dispatch the Release workflow after pushing the tag"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg jq rpm
+
+      - name: Configure release bot identity
+        run: |
+          git config user.name "vexyl-release-bot"
+          git config user.email "release-bot@vexyl.dev"
+
+      - name: Prepare release commit and tag
+        run: |
+          scripts/prepare-release.sh \
+            --version "${{ inputs.version }}" \
+            --commit \
+            --tag \
+            --push
+
+      - name: Dispatch release workflow
+        if: inputs.dispatch_release == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ inputs.version }}"
+          version="${version#v}"
+          tag="v$version"
+          before="$(gh run list --workflow Release --json databaseId --limit 1 | jq -r '.[0].databaseId // 0')"
+
+          gh workflow run release.yml -f tag="$tag"
+
+          release_run=""
+          for _ in $(seq 1 20); do
+            release_run="$(
+              gh run list --workflow Release --json databaseId --limit 10 \
+                | jq -r --argjson before "$before" '[.[] | select(.databaseId > $before)] | sort_by(.databaseId) | last | .databaseId // empty'
+            )"
+            [ -n "$release_run" ] && break
+            sleep 3
+          done
+
+          [ -n "$release_run" ] || {
+            printf 'Release workflow dispatch did not produce a run.\n' >&2
+            exit 1
+          }
+
+          gh run watch "$release_run" --exit-status
