@@ -7,11 +7,11 @@ on:
         description: "Release version to create, for example 0.2.9"
         required: true
         type: string
-      dispatch_release:
-        description: "Dispatch the Release workflow after pushing the tag"
+      release_notes:
+        description: "Human release notes to publish with the GitHub release"
         required: false
-        default: true
-        type: boolean
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -38,37 +38,63 @@ jobs:
       - name: Install package tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg jq rpm
+          sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg jq ripgrep rpm
 
       - name: Configure release bot identity
         run: |
           git config user.name "vexyl-release-bot"
           git config user.email "release-bot@vexyl.dev"
 
-      - name: Prepare release commit and tag
-        run: |
-          scripts/prepare-release.sh \
-            --version "${{ inputs.version }}" \
-            --commit \
-            --tag \
-            --push
-
-      - name: Dispatch release workflow
-        if: inputs.dispatch_release == true
+      - name: Snapshot release workflow cursor
+        id: release_cursor
         env:
           GH_TOKEN: ${{ github.token }}
+        run: |
+          before="$(gh run list --workflow Release --json databaseId --limit 1 | jq -r '.[0].databaseId // 0')"
+          printf 'before=%s\n' "$before" >>"$GITHUB_OUTPUT"
+
+      - name: Prepare release commit and tag
+        env:
+          RELEASE_NOTES_JSON: ${{ toJson(inputs.release_notes) }}
         run: |
           version="${{ inputs.version }}"
           version="${version#v}"
           tag="v$version"
-          before="$(gh run list --workflow Release --json databaseId --limit 1 | jq -r '.[0].databaseId // 0')"
+          notes_file="$RUNNER_TEMP/release-notes.md"
 
-          gh workflow run release.yml -f tag="$tag"
+          printf '%s' "$RELEASE_NOTES_JSON" | jq -r . >"$notes_file"
+          if ! grep -q '[^[:space:]]' "$notes_file"; then
+            printf 'Maintenance release for Vexyl Guard %s.\n' "$tag" >"$notes_file"
+          fi
+
+          scripts/prepare-release.sh \
+            --version "${{ inputs.version }}" \
+            --notes-file "$notes_file" \
+            --commit \
+            --tag \
+            --push
+
+      - name: Dispatch and watch release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NOTES_JSON: ${{ toJson(inputs.release_notes) }}
+        run: |
+          version="${{ inputs.version }}"
+          version="${version#v}"
+          tag="v$version"
+          before="${{ steps.release_cursor.outputs.before }}"
+          notes="$(printf '%s' "$RELEASE_NOTES_JSON" | jq -r .)"
+
+          jq -n \
+            --arg tag "$tag" \
+            --arg release_notes "$notes" \
+            '{tag: $tag, release_notes: $release_notes}' \
+            | gh workflow run release.yml --json
 
           release_run=""
-          for _ in $(seq 1 20); do
+          for _ in $(seq 1 40); do
             release_run="$(
-              gh run list --workflow Release --json databaseId --limit 10 \
+              gh run list --workflow Release --json databaseId --limit 20 \
                 | jq -r --argjson before "$before" '[.[] | select(.databaseId > $before)] | sort_by(.databaseId) | last | .databaseId // empty'
             )"
             [ -n "$release_run" ] && break

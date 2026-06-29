@@ -10,6 +10,11 @@ on:
         description: "Existing tag to publish, for example v0.2.8"
         required: true
         type: string
+      release_notes:
+        description: "Optional human release notes to prepend to generated package details"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -33,7 +38,7 @@ jobs:
       - name: Install package tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg openssl rpm
+          sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg openssl ripgrep rpm
 
       - name: Resolve release metadata
         id: meta
@@ -169,9 +174,40 @@ jobs:
           subject-path: "dist/packages/*"
 
       - name: Write release notes
+        env:
+          RELEASE_NOTES_INPUT: ${{ inputs.release_notes }}
         run: |
+          human_notes="$RUNNER_TEMP/release-human-notes.md"
+          tag="${{ steps.meta.outputs.tag }}"
+
+          if [ -n "${RELEASE_NOTES_INPUT:-}" ]; then
+            printf '%s\n' "$RELEASE_NOTES_INPUT" >"$human_notes"
+          elif [ "$(git cat-file -t "$tag" 2>/dev/null || true)" = "tag" ]; then
+            git cat-file tag "$tag" | sed '1,/^$/d' >"$human_notes"
+          else
+            : >"$human_notes"
+          fi
+
+          if ! grep -q '[^[:space:]]' "$human_notes"; then
+            printf 'Maintenance release for Vexyl Guard %s.\n' "$tag" >"$human_notes"
+          fi
+
+          if rg -n 'PRIVATE KEY|BEGIN [A-Z ]*PRIVATE|password[=:]|token[=:]|secret[=:]|api[_-]?key[=:]' "$human_notes" >/dev/null; then
+            rg -n 'PRIVATE KEY|BEGIN [A-Z ]*PRIVATE|password[=:]|token[=:]|secret[=:]|api[_-]?key[=:]' "$human_notes" >&2 || true
+            printf 'Release notes look like they may contain secret material.\n' >&2
+            exit 1
+          fi
+
           cat >RELEASE_NOTES.md <<EOF
           Vexyl Guard ${{ steps.meta.outputs.tag }} package release.
+
+          ## Release notes
+          EOF
+          sed -i 's/^          //' RELEASE_NOTES.md
+          cat "$human_notes" >>RELEASE_NOTES.md
+          cat >>RELEASE_NOTES.md <<EOF
+
+          ## Package artifacts
 
           This release publishes Linux package artifacts for operators who prefer package-managed installs:
 

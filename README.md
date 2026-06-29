@@ -78,15 +78,15 @@ Maintainers can configure `VEXYL_PLATFORM_PROMOTION_TOKEN` so the release workfl
 
 ## Release Readiness
 
-Maintainers can cut a release from GitHub Actions with the `Prepare Release` workflow. It bumps `agent/vexyl-guard.sh` and `pyproject.toml`, runs the package and repository checks, commits the version bump, creates the `vX.Y.Z` tag, pushes it, and dispatches the signed release workflow.
+Maintainers can cut a release from GitHub Actions with the `Prepare Release` workflow. It accepts human release notes, bumps `agent/vexyl-guard.sh` and `pyproject.toml`, runs the package and repository checks, commits the version bump, creates an annotated `vX.Y.Z` tag, pushes it, and dispatches the signed `Release` workflow with those notes.
 
 Local equivalent:
 
 ```bash
-scripts/prepare-release.sh --version 0.2.9 --commit --tag --push
+scripts/prepare-release.sh --version 0.2.9 --notes-file RELEASE_NOTES.md --commit --tag --push
 ```
 
-The signed release workflow publishes GitHub assets. The private platform repository then promotes the latest signed package repository to `vexyl.dev`.
+For local releases, the annotated tag carries the release notes and the tag push starts the signed `Release` workflow. The private platform repository then promotes the latest signed package repository to `vexyl.dev`.
 
 Build preview Linux packages from the public source tree:
 

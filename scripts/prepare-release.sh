@@ -9,6 +9,7 @@ DO_COMMIT=false
 DO_TAG=false
 DO_PUSH=false
 ALLOW_DIRTY=false
+RELEASE_NOTES_FILE=""
 TMP_PATHS=()
 
 usage() {
@@ -22,6 +23,7 @@ Options:
   --tag              Create an annotated vVERSION tag after checks pass.
   --push             Push the release commit and tag to origin.
   --branch NAME      Branch to push when --push is used. Default: main.
+  --notes-file FILE  Markdown release notes for the annotated tag.
   --allow-dirty      Allow tracked working-tree changes before the script runs.
                      Intended only for temporary local validation.
   --help             Show this help.
@@ -70,6 +72,11 @@ parse_args() {
         shift
         [ "${1:-}" ] || die "--branch requires a value"
         BRANCH="$1"
+        ;;
+      --notes-file)
+        shift
+        [ "${1:-}" ] || die "--notes-file requires a value"
+        RELEASE_NOTES_FILE="$1"
         ;;
       --allow-dirty)
         ALLOW_DIRTY=true
@@ -200,6 +207,29 @@ EOF
   printf '%s\n' "$private_key"
 }
 
+release_notes_file() {
+  local notes_file
+  if [ -n "$RELEASE_NOTES_FILE" ]; then
+    [ -f "$RELEASE_NOTES_FILE" ] || die "release notes file does not exist: $RELEASE_NOTES_FILE"
+    notes_file="$RELEASE_NOTES_FILE"
+  else
+    notes_file="$(mktemp)"
+    TMP_PATHS+=("$notes_file")
+    printf 'Maintenance release for Vexyl Guard %s.\n' "$TAG" >"$notes_file"
+  fi
+
+  if ! grep -q '[^[:space:]]' "$notes_file"; then
+    die "release notes file must not be empty"
+  fi
+
+  if rg -n 'PRIVATE KEY|BEGIN [A-Z ]*PRIVATE|password[=:]|token[=:]|secret[=:]|api[_-]?key[=:]' "$notes_file" >/dev/null; then
+    rg -n 'PRIVATE KEY|BEGIN [A-Z ]*PRIVATE|password[=:]|token[=:]|secret[=:]|api[_-]?key[=:]' "$notes_file" >&2 || true
+    die "release notes look like they may contain secret material"
+  fi
+
+  printf '%s\n' "$notes_file"
+}
+
 run_checks() {
   local repo_private_key tmp_extract
   log "checking required tools"
@@ -212,6 +242,7 @@ run_checks() {
     gpg \
     gzip \
     python3 \
+    rg \
     rpm \
     rpmbuild \
     rpmsign; do
@@ -267,13 +298,15 @@ commit_release() {
 }
 
 tag_release() {
+  local notes_file
   [ "$DO_TAG" = true ] || return 0
   log "creating annotated tag $TAG"
   if ! git -C "$ROOT_DIR" diff --quiet || ! git -C "$ROOT_DIR" diff --cached --quiet; then
     git -C "$ROOT_DIR" status --short >&2
     die "cannot tag with uncommitted tracked changes; use --commit or commit manually"
   fi
-  git -C "$ROOT_DIR" tag -a "$TAG" -m "Vexyl Guard $TAG"
+  notes_file="$(release_notes_file)"
+  git -C "$ROOT_DIR" tag -a "$TAG" --cleanup=verbatim -F "$notes_file"
 }
 
 push_release() {
