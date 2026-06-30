@@ -145,6 +145,7 @@ Vexyl Guard is free to install. Monthly support plans help fund signed releases,
 
 ```text
 https://vexyl.dev/#plans
+https://github.com/sponsors/vexyl-labs
 ```
 
 GitHub Sponsors is also enabled for the Vexyl Labs profile.
