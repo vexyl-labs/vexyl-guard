@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vexyl-guard"
-version = "0.2.8"
+version = "0.2.9"
 description = "Vexyl Guard local defensive tooling"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
