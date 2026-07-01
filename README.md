@@ -6,6 +6,14 @@ The public project focuses on the local host agent, install packaging, safe fixt
 
 This project is intentionally defensive. It does not scan third-party systems, exploit targets, hide itself, or create irreversible persistence.
 
+## Quick Links
+
+- Install: `https://vexyl.dev/#install`
+- Public preview feedback: `https://github.com/vexyl-labs/vexyl-guard/issues/1`
+- Structured install report: `https://github.com/vexyl-labs/vexyl-guard/issues/new?template=install_feedback.yml`
+- Operator Updates: `https://vexyl.dev/updates/`
+- Sponsor Vexyl Labs: `https://github.com/sponsors/vexyl-labs`
+
 ## What Is Included
 
 - `agent/vexyl-guard.sh`: Bash host agent for Linux servers.

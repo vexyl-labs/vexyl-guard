@@ -1,5 +1,14 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Public preview feedback
+    url: https://github.com/vexyl-labs/vexyl-guard/issues/1
+    about: Share install results, monitor-mode behavior, and public preview feedback.
+  - name: Operator Updates
+    url: https://vexyl.dev/updates/
+    about: Read release notes and practical project updates.
+  - name: Sponsor Vexyl Labs
+    url: https://github.com/sponsors/vexyl-labs
+    about: Support signed releases, package maintenance, hosted services, and continued defensive research.
   - name: Private security report
     url: mailto:security@vexyl.dev
     about: Report vulnerabilities privately. Do not publish secrets or exploit details.
