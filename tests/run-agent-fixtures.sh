@@ -146,3 +146,56 @@ awk -F '\t' '{ print $1 "\t" $2 "\t" $5 }' "$STORAGE_EDGE_STATE_DIR/scores.tsv" 
   sort >"$TMP_DIR/storage-edge-score.out"
 sort "$FIXTURES/expected-storage-edge-score.tsv" >"$TMP_DIR/expected-storage-edge-score.sorted"
 compare "$TMP_DIR/expected-storage-edge-score.sorted" "$TMP_DIR/storage-edge-score.out" "object storage and edge scoring"
+
+SUPPORT_STATE_DIR="$TMP_DIR/support-state"
+mkdir -p "$SUPPORT_STATE_DIR"
+cat >"$SUPPORT_STATE_DIR/release.json" <<'JSON'
+{"version":"0.2.9"}
+JSON
+printf '203.0.113.10\t1\t2\t3\tssh\n' >"$SUPPORT_STATE_DIR/scores.tsv"
+printf '203.0.113.10\tprobe\t1\t2\t3\n' >"$SUPPORT_STATE_DIR/categories.tsv"
+printf '203.0.113.10\tnone\t1\t2\tssh\n' >"$SUPPORT_STATE_DIR/blocks.tsv"
+printf '2026-07-01T00:00:00Z\t203.0.113.10\t80\twarn\tATTACK\tlow\tRULE\tredacted\n' >"$SUPPORT_STATE_DIR/ai-decisions.tsv"
+
+SUPPORT_CONFIG="$TMP_DIR/support.conf"
+cat >"$SUPPORT_CONFIG" <<EOF
+VEXYL_MODE=monitor
+VEXYL_API_URL=https://api.example.test/private/path
+VEXYL_API_TOKEN=secret-token-value
+VEXYL_FIREWALL=none
+VEXYL_STATE_DIR=$SUPPORT_STATE_DIR
+VEXYL_RELEASE_PUBLIC_KEY_FILE=$TMP_DIR/release-signing-public.pem
+EOF
+touch "$TMP_DIR/release-signing-public.pem"
+
+VEXYL_CONFIG_FILE="$SUPPORT_CONFIG" "$AGENT" support-report >"$TMP_DIR/support-report.out"
+
+if ! grep -q '^Vexyl Guard support report$' "$TMP_DIR/support-report.out"; then
+  printf 'not ok - support report header\n' >&2
+  sed -n '1,120p' "$TMP_DIR/support-report.out" >&2
+  exit 1
+fi
+printf 'ok - support report header\n'
+
+for forbidden in 'secret-token-value' 'api.example.test' '203.0.113.10' "$SUPPORT_STATE_DIR" "$TMP_DIR"; do
+  if grep -q "$forbidden" "$TMP_DIR/support-report.out"; then
+    printf 'not ok - support report redacts %s\n' "$forbidden" >&2
+    sed -n '1,160p' "$TMP_DIR/support-report.out" >&2
+    exit 1
+  fi
+done
+printf 'ok - support report omits secrets and host-specific paths\n'
+
+if ! grep -q '^  api_configured: yes$' "$TMP_DIR/support-report.out"; then
+  printf 'not ok - support report API configured flag\n' >&2
+  sed -n '1,160p' "$TMP_DIR/support-report.out" >&2
+  exit 1
+fi
+printf 'ok - support report API configured flag\n'
+
+if ! grep -q '^  tracked_scores: 1$' "$TMP_DIR/support-report.out"; then
+  printf 'not ok - support report tracked scores\n' >&2
+  sed -n '1,160p' "$TMP_DIR/support-report.out" >&2
+  exit 1
+fi
+printf 'ok - support report tracked scores\n'

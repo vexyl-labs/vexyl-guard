@@ -70,6 +70,7 @@ Commands:
   upgrade [url]   Verify and install the latest signed preview release.
   verify-policy   Verify and apply a local signed policy bundle JSON file.
   status          Print local agent status.
+  support-report  Print a redacted install and service report for public feedback.
   unblock <ip>    Remove a local firewall block and state entry.
   test-parse      Read log lines from stdin and print parsed IPs.
   test-classify   Read log lines from stdin and print defensive classifications.
@@ -1952,6 +1953,163 @@ release_version: $release_version
 EOF
 }
 
+safe_os_field() {
+  local field="$1" value
+  value="$(sed -nE "s/^${field}=//p" /etc/os-release 2>/dev/null | head -n 1)"
+  value="${value%\"}"
+  value="${value#\"}"
+  value="$(printf '%s' "$value" | redact_ai_signal_text | tr '\t\r\n' '   ')"
+  [ -n "$value" ] || value="unknown"
+  printf '%s' "$value"
+}
+
+count_command_lines() {
+  local count=0 _line
+  while IFS= read -r _line; do
+    count=$((count + 1))
+  done
+  printf '%s' "$count"
+}
+
+systemd_unit_property() {
+  local property="$1" value
+  command -v systemctl >/dev/null 2>&1 || {
+    printf 'unavailable'
+    return 0
+  }
+  value="$(systemctl show vexyl-guard --property="$property" --value 2>/dev/null | head -n 1)"
+  [ -n "$value" ] || value="unknown"
+  printf '%s' "$value"
+}
+
+systemd_unit_enabled() {
+  local value
+  command -v systemctl >/dev/null 2>&1 || {
+    printf 'unavailable'
+    return 0
+  }
+  value="$(systemctl is-enabled vexyl-guard 2>/dev/null || true)"
+  [ -n "$value" ] || value="unknown"
+  printf '%s' "$value"
+}
+
+support_report() {
+  local backend blocked scores categories ai_decisions ai_status policy_mode policy_payload trusted_keys revoked_keys release_key release_version
+  local os_name os_id os_version os_version_id kernel arch euid_label service_load service_active service_sub service_enabled
+  local auth_count web_count mail_count firewall_count vpn_count database_count object_storage_count edge_count
+
+  backend="$(detect_firewall)"
+  blocked="$(awk 'END { print NR + 0 }' "$BLOCKS_FILE" 2>/dev/null || printf 0)"
+  scores="$(awk 'END { print NR + 0 }' "$SCORES_FILE" 2>/dev/null || printf 0)"
+  categories="$(awk 'END { print NR + 0 }' "$CATEGORIES_FILE" 2>/dev/null || printf 0)"
+  ai_decisions="$(awk 'END { print NR + 0 }' "$AI_DECISIONS_FILE" 2>/dev/null || printf 0)"
+  ai_status="$(ai_intel_status)"
+  trusted_keys="$(policy_public_key_count)"
+  revoked_keys="$(policy_revoked_key_count)"
+  release_key="$([ -r "$VEXYL_RELEASE_PUBLIC_KEY_FILE" ] && printf yes || printf no)"
+  release_version="$(json_string_field "$RELEASE_STATE_FILE" "version")"
+  [ -n "$release_version" ] || release_version="$VERSION"
+
+  if policy_bundle_disabled; then
+    policy_mode="legacy"
+  elif policy_bundle_public_key_configured; then
+    policy_mode="signed-rs256"
+  elif policy_bundle_secret_configured; then
+    policy_mode="signed-hs256"
+  elif policy_bundle_required_without_verifier; then
+    policy_mode="missing_verifier"
+  else
+    policy_mode="legacy_auto"
+  fi
+
+  policy_payload="$([ -s "$POLICY_PAYLOAD_FILE" ] && printf yes || printf no)"
+  os_name="$(safe_os_field NAME)"
+  os_id="$(safe_os_field ID)"
+  os_version="$(safe_os_field VERSION)"
+  os_version_id="$(safe_os_field VERSION_ID)"
+  kernel="$(uname -srm 2>/dev/null | redact_ai_signal_text | tr '\t\r\n' '   ')"
+  [ -n "$kernel" ] || kernel="unknown"
+  arch="$(uname -m 2>/dev/null | tr '\t\r\n' '   ')"
+  [ -n "$arch" ] || arch="unknown"
+
+  if [ "$(id -u 2>/dev/null || printf 1)" -eq 0 ] 2>/dev/null; then
+    euid_label="root"
+  else
+    euid_label="non_root"
+  fi
+
+  service_load="$(systemd_unit_property LoadState)"
+  service_active="$(systemd_unit_property ActiveState)"
+  service_sub="$(systemd_unit_property SubState)"
+  service_enabled="$(systemd_unit_enabled)"
+
+  auth_count="$(existing_auth_logs | count_command_lines)"
+  web_count="$(existing_web_logs | count_command_lines)"
+  mail_count="$(existing_mail_logs | count_command_lines)"
+  firewall_count="$(existing_firewall_logs | count_command_lines)"
+  vpn_count="$(existing_vpn_logs | count_command_lines)"
+  database_count="$(existing_database_logs | count_command_lines)"
+  object_storage_count="$(existing_object_storage_logs | count_command_lines)"
+  edge_count="$(existing_edge_logs | count_command_lines)"
+
+  cat <<EOF
+Vexyl Guard support report
+safe_to_post: yes_redacted_summary_only
+report_notes: no raw logs, hostnames, IP addresses, usernames, tokens, API URLs, or custom local paths are included
+agent_version: $VERSION
+release_version: $release_version
+generated_at_utc: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+effective_user: $euid_label
+
+system:
+  os_name: $os_name
+  os_id: $os_id
+  os_version: $os_version
+  os_version_id: $os_version_id
+  kernel: $kernel
+  arch: $arch
+
+service:
+  systemd_available: $(command -v systemctl >/dev/null 2>&1 && printf yes || printf no)
+  unit_load_state: $service_load
+  unit_active_state: $service_active
+  unit_sub_state: $service_sub
+  unit_enabled: $service_enabled
+
+agent:
+  mode: $VEXYL_MODE
+  firewall_backend: $backend
+  api_configured: $([ -n "$VEXYL_API_URL" ] && [ -n "$VEXYL_API_TOKEN" ] && printf yes || printf no)
+  release_key_configured: $release_key
+  ai_intel: $ai_status
+  tracked_scores: $scores
+  tracked_probe_categories: $categories
+  tracked_blocks: $blocked
+  tracked_ai_decisions: $ai_decisions
+
+policy:
+  policy_mode: $policy_mode
+  signed_policy_applied: $policy_payload
+  trusted_policy_keys: $trusted_keys
+  revoked_policy_keys: $revoked_keys
+
+log_sources:
+  auth_logs_found: $auth_count
+  web_logs_found: $web_count
+  mail_logs_found: $mail_count
+  firewall_logs_found: $firewall_count
+  vpn_logs_found: $vpn_count
+  database_logs_found: $database_count
+  object_storage_logs_found: $object_storage_count
+  edge_logs_found: $edge_count
+
+feedback:
+  public_issue: https://github.com/vexyl-labs/vexyl-guard/issues/1
+  structured_install_report: https://github.com/vexyl-labs/vexyl-guard/issues/new?template=install_feedback.yml
+  sensitive_reports: security@vexyl.dev
+EOF
+}
+
 test_parse() {
   local line ip
   while IFS= read -r line; do
@@ -2232,6 +2390,7 @@ main() {
     upgrade) upgrade_agent "${2:-}" ;;
     verify-policy) ensure_state; [ -n "${2:-}" ] || die "verify-policy requires a bundle JSON file"; verify_policy_bundle_file "$2" || exit 1 ;;
     status) ensure_state; status ;;
+    support-report) ensure_state; support_report ;;
     unblock) ensure_state; [ -n "${2:-}" ] || die "unblock requires an IP"; unblock_ip "$2" ;;
     test-parse) test_parse ;;
     test-classify) test_classify ;;

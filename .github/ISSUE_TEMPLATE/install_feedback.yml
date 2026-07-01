@@ -72,6 +72,14 @@ body:
     validations:
       required: true
   - type: textarea
+    id: support_report
+    attributes:
+      label: Redacted support report
+      description: Run `sudo vexyl-guard support-report` and paste the output here. Review it before posting and remove anything you consider private.
+      render: text
+    validations:
+      required: false
+  - type: textarea
     id: monitor_clarity
     attributes:
       label: Monitor-mode clarity
