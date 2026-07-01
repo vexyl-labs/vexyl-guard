@@ -1,0 +1,95 @@
+name: Preview install feedback
+description: Share public preview install results from a Linux host.
+title: "[Install feedback]: "
+labels: ["preview-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Vexyl Guard.
+
+        Do not include secrets, private logs, customer data, hostnames, public IP addresses, usernames, tokens, runnable exploit code, malware code, or offensive instructions.
+
+        If the report includes a vulnerability, sensitive output, or private system details, email security@vexyl.dev instead of opening a public issue.
+  - type: input
+    id: distro
+    attributes:
+      label: Distro and version
+      description: "Example: Debian 12, Ubuntu 24.04, Fedora 40, Rocky Linux 9."
+      placeholder: "Debian 12"
+    validations:
+      required: true
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Install method
+      options:
+        - Shell installer
+        - APT repository
+        - DNF/YUM repository
+        - Manual package download
+        - Local source install
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Vexyl Guard version
+      description: Run `vexyl-guard version` or check the package version if available.
+      placeholder: "0.2.9"
+    validations:
+      required: true
+  - type: dropdown
+    id: service_started
+    attributes:
+      label: Did the service start?
+      options:
+        - "Yes"
+        - "No"
+        - Not tested
+        - Not applicable
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: Commands used
+      description: Paste only the install/start/status commands you ran. Redact local paths or host-specific details when needed.
+      render: shell
+      placeholder: |
+        curl -fsSL https://vexyl.dev/install.sh | sudo sh
+        sudo systemctl start vexyl-guard
+        sudo vexyl-guard status
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: What happened? Keep it practical and redact anything host-specific.
+      placeholder: "Installed cleanly, service started, status output was understandable."
+    validations:
+      required: true
+  - type: textarea
+    id: monitor_clarity
+    attributes:
+      label: Monitor-mode clarity
+      description: Was the output understandable? What was noisy, confusing, missing, or useful?
+    validations:
+      required: true
+  - type: textarea
+    id: redacted_output
+    attributes:
+      label: Redacted output
+      description: Optional. Include only safe, redacted output. Do not paste private logs, secrets, tokens, hostnames, usernames, public IPs, customer data, or live request details.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: docs_feedback
+    attributes:
+      label: Docs or install friction
+      description: What should be clearer before more operators try it?
+    validations:
+      required: false

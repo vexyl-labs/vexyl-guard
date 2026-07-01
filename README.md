@@ -28,6 +28,24 @@ sudo vexyl-guard status
 
 Start in monitor mode. Move to enforcement only after reviewing local output and confirming the host policy is appropriate.
 
+## Preview Feedback
+
+Public preview feedback is welcome here:
+
+```text
+https://github.com/vexyl-labs/vexyl-guard/issues/1
+```
+
+Structured install reports can also be opened here:
+
+```text
+https://github.com/vexyl-labs/vexyl-guard/issues/new?template=install_feedback.yml
+```
+
+Useful reports include distro/version, install method, service startup result, monitor-mode clarity, noisy signals, false positives, and missing docs.
+
+Do not post secrets, private logs, customer data, hostnames, public IP addresses, usernames, tokens, runnable exploit code, malware code, or offensive instructions. Send sensitive reports to `security@vexyl.dev`.
+
 ## Local Source Install
 
 ```bash
