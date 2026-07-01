@@ -271,6 +271,7 @@ run_checks() {
   bash -n "$ROOT_DIR/agent/vexyl-guard.sh"
   bash -n "$ROOT_DIR/packaging/build-packages.sh"
   bash -n "$ROOT_DIR/packaging/build-repositories.sh"
+  sh -n "$ROOT_DIR/packaging/install-report.sh"
   bash -n "$ROOT_DIR/packaging/sign-rpm-packages.sh"
   bash -n "$ROOT_DIR/packaging/smoke-install-repositories.sh"
   bash -n "$ROOT_DIR/packaging/verify-package-contents.sh"

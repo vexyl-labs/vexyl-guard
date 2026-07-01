@@ -99,6 +99,7 @@ docker_run() {
   local image="$1"
   shift
   docker run --rm \
+    --env VEXYL_INSTALL_REPORT=off \
     --volume "$REPO_DIR:/repo:ro" \
     --tmpfs /tmp:exec \
     "$image" "$@"
@@ -108,6 +109,7 @@ run_apt_smoke() {
   log "running APT install smoke test with $APT_IMAGE"
   docker_run "$APT_IMAGE" bash -ceu '
     export DEBIAN_FRONTEND=noninteractive
+    export VEXYL_INSTALL_REPORT=off
 
     apt-get update
     apt-get install -y --no-install-recommends ca-certificates gnupg
@@ -129,6 +131,7 @@ EOF
     dpkg-query -W vexyl-guard
     test -x /usr/sbin/vexyl-guard
     test -x /usr/bin/vexyl
+    test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /etc/vexyl/guard.conf
     test -f /etc/vexyl/release-signing-public.pem
@@ -141,6 +144,8 @@ EOF
 run_dnf_smoke() {
   log "running DNF install smoke test with $DNF_IMAGE"
   docker_run "$DNF_IMAGE" bash -ceu '
+    export VEXYL_INSTALL_REPORT=off
+
     rpm --import /repo/vexyl-packages.asc
     cat >/etc/yum.repos.d/vexyl.repo <<EOF
 [vexyl]
@@ -158,6 +163,7 @@ EOF
     rpm -q vexyl-guard
     test -x /usr/sbin/vexyl-guard
     test -x /usr/bin/vexyl
+    test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /etc/vexyl/guard.conf
     test -f /etc/vexyl/release-signing-public.pem

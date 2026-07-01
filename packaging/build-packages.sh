@@ -77,6 +77,7 @@ stage_tree() {
   service_path="$4"
 
   install -d -m 0755 "$dest/usr/share/doc/vexyl-guard"
+  install -d -m 0755 "$dest/usr/lib/vexyl"
   install -d -m 0755 "$dest/opt/vexyl/intel"
   install -d -m 0755 "$dest/$(dirname "$agent_path")" "$dest/$(dirname "$cli_path")"
   install -d -m 0755 "$dest/$(dirname "$service_path")"
@@ -86,6 +87,7 @@ stage_tree() {
 
   install -m 0755 "$ROOT_DIR/agent/vexyl-guard.sh" "$dest/$agent_path"
   install -m 0755 "$ROOT_DIR/vexyl" "$dest/$cli_path"
+  install -m 0755 "$ROOT_DIR/packaging/install-report.sh" "$dest/usr/lib/vexyl/install-report.sh"
   install -m 0644 "$ROOT_DIR"/intel/*.py "$dest/opt/vexyl/intel/"
 
   install -m 0640 "$ROOT_DIR/config/vexyl-guard.conf.example" "$dest/etc/vexyl/guard.conf"
@@ -114,8 +116,26 @@ write_postinst() {
 #!/bin/sh
 set -e
 
+report_install() {
+  event_type="$1"
+  phase="$2"
+  error_code="${3:-}"
+  service_status="${4:-}"
+  if [ -x /usr/lib/vexyl/install-report.sh ]; then
+    VEXYL_REPORT_INSTALL_METHOD=package \
+      VEXYL_REPORT_PACKAGE_MANAGER=apt \
+      VEXYL_REPORT_EVENT_TYPE="$event_type" \
+      VEXYL_REPORT_PHASE="$phase" \
+      VEXYL_REPORT_ERROR_CODE="$error_code" \
+      VEXYL_REPORT_SERVICE_STATUS="$service_status" \
+      /usr/lib/vexyl/install-report.sh >/dev/null 2>&1 || true
+  fi
+}
+
 install -d -m 0750 /etc/vexyl /var/lib/vexyl
 install -d -m 0755 /etc/vexyl/policy-keys.d
+report_install install_started package_configure "" configuring
+
 if [ ! -f /etc/vexyl/revoked-policy-keys.txt ]; then
   : >/etc/vexyl/revoked-policy-keys.txt
   chmod 0644 /etc/vexyl/revoked-policy-keys.txt
@@ -127,9 +147,25 @@ fi
 if command -v vexyl >/dev/null 2>&1; then
   vexyl threat --db /var/lib/vexyl/ai_threats.sqlite seed >/dev/null 2>&1 || true
 fi
+
+service_status=systemctl_missing
+service_error=
 if command -v systemctl >/dev/null 2>&1; then
-  systemctl daemon-reload >/dev/null 2>&1 || true
-  systemctl enable vexyl-guard >/dev/null 2>&1 || true
+  service_status=unknown
+  systemctl daemon-reload >/dev/null 2>&1 || service_error=daemon_reload_failed
+  if systemctl enable vexyl-guard >/dev/null 2>&1; then
+    service_status=enabled
+  else
+    service_status=enable_failed
+    [ -n "$service_error" ] || service_error=systemd_enable_failed
+  fi
+fi
+
+report_install install_completed package_configured "$service_error" "$service_status"
+if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet vexyl-guard >/dev/null 2>&1; then
+  report_install install_service_started service_check "" running
+elif [ -n "$service_error" ]; then
+  report_install install_service_failed service_check "$service_error" "$service_status"
 fi
 EOF
   chmod 0755 "$target"
@@ -258,8 +294,26 @@ mkdir -p %{buildroot}
 cp -a . %{buildroot}/
 
 %post
+report_install() {
+  event_type="\$1"
+  phase="\$2"
+  error_code="\${3:-}"
+  service_status="\${4:-}"
+  if [ -x /usr/lib/vexyl/install-report.sh ]; then
+    VEXYL_REPORT_INSTALL_METHOD=package \\
+      VEXYL_REPORT_PACKAGE_MANAGER=dnf \\
+      VEXYL_REPORT_EVENT_TYPE="\$event_type" \\
+      VEXYL_REPORT_PHASE="\$phase" \\
+      VEXYL_REPORT_ERROR_CODE="\$error_code" \\
+      VEXYL_REPORT_SERVICE_STATUS="\$service_status" \\
+      /usr/lib/vexyl/install-report.sh >/dev/null 2>&1 || true
+  fi
+}
+
 install -d -m 0750 /etc/vexyl /var/lib/vexyl
 install -d -m 0755 /etc/vexyl/policy-keys.d
+report_install install_started package_configure "" configuring
+
 if [ ! -f /etc/vexyl/revoked-policy-keys.txt ]; then
   : >/etc/vexyl/revoked-policy-keys.txt
   chmod 0644 /etc/vexyl/revoked-policy-keys.txt
@@ -271,9 +325,23 @@ fi
 if command -v vexyl >/dev/null 2>&1; then
   vexyl threat --db /var/lib/vexyl/ai_threats.sqlite seed >/dev/null 2>&1 || true
 fi
+service_status=systemctl_missing
+service_error=
 if command -v systemctl >/dev/null 2>&1; then
-  systemctl daemon-reload >/dev/null 2>&1 || true
-  systemctl enable vexyl-guard >/dev/null 2>&1 || true
+  service_status=unknown
+  systemctl daemon-reload >/dev/null 2>&1 || service_error=daemon_reload_failed
+  if systemctl enable vexyl-guard >/dev/null 2>&1; then
+    service_status=enabled
+  else
+    service_status=enable_failed
+    [ -n "\$service_error" ] || service_error=systemd_enable_failed
+  fi
+fi
+report_install install_completed package_configured "\$service_error" "\$service_status"
+if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet vexyl-guard >/dev/null 2>&1; then
+  report_install install_service_started service_check "" running
+elif [ -n "\$service_error" ]; then
+  report_install install_service_failed service_check "\$service_error" "\$service_status"
 fi
 
 %preun
@@ -296,6 +364,8 @@ fi
 /etc/vexyl/release-signing-public.pem
 /etc/vexyl/policy-signing-public.pem
 /etc/vexyl/policy-keys.d/vexyl-policy-dev-1.pem
+%dir /usr/lib/vexyl
+/usr/lib/vexyl/install-report.sh
 %dir /opt/vexyl
 %dir /opt/vexyl/intel
 /opt/vexyl/intel/*.py

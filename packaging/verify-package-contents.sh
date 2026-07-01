@@ -36,6 +36,7 @@ for package in "$@"; do
   for required in \
     "/usr/sbin/vexyl-guard" \
     "/usr/bin/vexyl" \
+    "/usr/lib/vexyl/install-report.sh" \
     "/opt/vexyl/intel/cli.py" \
     "/opt/vexyl/intel/database.py" \
     "/etc/vexyl/guard.conf" \

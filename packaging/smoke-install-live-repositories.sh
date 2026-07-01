@@ -87,6 +87,7 @@ docker_run() {
   local image="$1"
   shift
   docker run --rm \
+    --env VEXYL_INSTALL_REPORT=off \
     --env VEXYL_REPO_BASE_URL="$BASE_URL" \
     --tmpfs /tmp:exec \
     "$image" "$@"
@@ -96,6 +97,7 @@ run_apt_canary() {
   log "running live APT install canary with $APT_IMAGE from $BASE_URL"
   docker_run "$APT_IMAGE" bash -ceu '
     export DEBIAN_FRONTEND=noninteractive
+    export VEXYL_INSTALL_REPORT=off
 
     apt-get update
     apt-get install -y --no-install-recommends ca-certificates curl gnupg
@@ -115,6 +117,7 @@ run_apt_canary() {
     dpkg-query -W vexyl-guard
     test -x /usr/sbin/vexyl-guard
     test -x /usr/bin/vexyl
+    test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /etc/vexyl/guard.conf
     test -f /etc/vexyl/release-signing-public.pem
@@ -127,6 +130,8 @@ run_apt_canary() {
 run_dnf_canary() {
   log "running live DNF install canary with $DNF_IMAGE from $BASE_URL"
   docker_run "$DNF_IMAGE" bash -ceu '
+    export VEXYL_INSTALL_REPORT=off
+
     curl -fsSL "$VEXYL_REPO_BASE_URL/vexyl.repo" -o /etc/yum.repos.d/vexyl.repo
     grep -q "baseurl=$VEXYL_REPO_BASE_URL/rpm" /etc/yum.repos.d/vexyl.repo
     grep -q "^gpgcheck=1$" /etc/yum.repos.d/vexyl.repo
@@ -137,6 +142,7 @@ run_dnf_canary() {
     rpm -q vexyl-guard
     test -x /usr/sbin/vexyl-guard
     test -x /usr/bin/vexyl
+    test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /etc/vexyl/guard.conf
     test -f /etc/vexyl/release-signing-public.pem

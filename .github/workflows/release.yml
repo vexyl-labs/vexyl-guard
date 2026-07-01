@@ -84,6 +84,7 @@ jobs:
           bash -n agent/vexyl-guard.sh
           bash -n packaging/build-packages.sh
           bash -n packaging/build-repositories.sh
+          sh -n packaging/install-report.sh
           bash -n packaging/sign-rpm-packages.sh
           bash -n packaging/smoke-install-repositories.sh
           bash -n scripts/notify-workflow-failure.sh

@@ -74,6 +74,13 @@ sudo systemctl start vexyl-guard
 
 Manual package downloads are still available from the GitHub release page. Verify release downloads with `SHA256SUMS`, `SHA256SUMS.sig`, and `release-signing-public.pem`.
 
+Package installs send a minimal install-status event so Vexyl Labs can spot broken package paths. No host logs, prompts, secrets, or local config values are sent. To disable this during install:
+
+```bash
+sudo env VEXYL_INSTALL_REPORT=off apt install vexyl-guard
+sudo env VEXYL_INSTALL_REPORT=off dnf install vexyl-guard
+```
+
 Maintainers can configure `VEXYL_PLATFORM_PROMOTION_TOKEN` so the release workflow dispatches the private platform promotion after signed assets are published.
 
 ## Release Readiness
