@@ -3,9 +3,12 @@ contact_links:
   - name: Public preview feedback
     url: https://github.com/vexyl-labs/vexyl-guard/issues/1
     about: Share install results, monitor-mode behavior, and public preview feedback.
-  - name: Operator Updates
+  - name: Operator Notes
     url: https://vexyl.dev/updates/
     about: Read release notes and practical project updates.
+  - name: Operator resources
+    url: https://vexyl.dev/resources/
+    about: Read Linux server security checklists, verification guides, and redaction guidance.
   - name: Sponsor Vexyl Labs
     url: https://github.com/sponsors/vexyl-labs
     about: Support signed releases, package maintenance, hosted services, and continued defensive research.

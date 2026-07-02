@@ -9,9 +9,11 @@ This project is intentionally defensive. It does not scan third-party systems, e
 ## Quick Links
 
 - Install: `https://vexyl.dev/#install`
+- Resources: `https://vexyl.dev/resources/`
+- Verify before installing: `https://vexyl.dev/resources/verify-before-you-install/`
 - Public preview feedback: `https://github.com/vexyl-labs/vexyl-guard/issues/1`
 - Structured install report: `https://github.com/vexyl-labs/vexyl-guard/issues/new?template=install_feedback.yml`
-- Operator Updates: `https://vexyl.dev/updates/`
+- Operator Notes: `https://vexyl.dev/updates/`
 - Sponsor Vexyl Labs: `https://github.com/sponsors/vexyl-labs`
 
 ## What Is Included
@@ -59,6 +61,18 @@ https://github.com/vexyl-labs/vexyl-guard/issues/new?template=install_feedback.y
 Useful reports include distro/version, install method, service startup result, monitor-mode clarity, noisy signals, false positives, missing docs, and the redacted output from `sudo vexyl-guard support-report`.
 
 Do not post secrets, private logs, customer data, hostnames, public IP addresses, usernames, tokens, runnable exploit code, malware code, or offensive instructions. Send sensitive reports to `security@vexyl.dev`.
+
+## Operator Resources
+
+These guides are useful even before installing Vexyl Guard:
+
+```text
+https://vexyl.dev/resources/linux-server-exposure-checklist/
+https://vexyl.dev/resources/verify-before-you-install/
+https://vexyl.dev/resources/redacted-support-reports/
+```
+
+Use them to review exposed Linux hosts, inspect release artifacts, and avoid leaking sensitive details when asking for help.
 
 ## Local Source Install
 
@@ -183,7 +197,7 @@ Vexyl Guard is licensed under the Apache License 2.0. See `LICENSE`.
 Vexyl Guard is free to install. Monthly support plans help fund signed releases, packaging, hosted services, and continued defensive research:
 
 ```text
-https://vexyl.dev/#plans
+https://vexyl.dev/#support
 https://github.com/sponsors/vexyl-labs
 ```
 
