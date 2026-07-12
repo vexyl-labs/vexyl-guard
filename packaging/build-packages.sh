@@ -102,7 +102,10 @@ stage_tree() {
   : >"$dest/etc/vexyl/revoked-policy-keys.txt"
   chmod 0644 "$dest/etc/vexyl/revoked-policy-keys.txt"
 
-  sed "s#^ExecStart=.*#ExecStart=/$agent_path daemon#" "$ROOT_DIR/packaging/vexyl-guard.service" >"$dest/$service_path"
+  sed \
+    -e "s#^ExecStartPre=.*#ExecStartPre=/$agent_path validate-config#" \
+    -e "s#^ExecStart=.*#ExecStart=/$agent_path daemon#" \
+    "$ROOT_DIR/packaging/vexyl-guard.service" >"$dest/$service_path"
   chmod 0644 "$dest/$service_path"
 
   install -m 0644 "$ROOT_DIR/LICENSE" "$dest/usr/share/doc/vexyl-guard/LICENSE"
@@ -221,7 +224,7 @@ Section: admin
 Priority: optional
 Architecture: all
 Maintainer: Vexyl Labs <security@vexyl.dev>
-Depends: bash, python3, systemd
+Depends: bash, openssl, python3, systemd
 Recommends: curl, nftables | iptables
 Installed-Size: ${installed_size}
 Homepage: https://vexyl.dev
@@ -274,6 +277,7 @@ License: Apache-2.0
 URL: https://vexyl.dev
 BuildArch: noarch
 Requires: bash
+Requires: openssl
 Requires: python3
 Recommends: curl
 Recommends: nftables

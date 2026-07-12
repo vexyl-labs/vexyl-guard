@@ -70,6 +70,7 @@ Commands:
   upgrade [url]   Verify and install the latest signed preview release.
   verify-policy   Verify and apply a local signed policy bundle JSON file.
   status          Print local agent status.
+  validate-config Validate configuration before starting or enabling enforcement.
   support-report  Print a redacted install and service report for public feedback.
   unblock <ip>    Remove a local firewall block and state entry.
   test-parse      Read log lines from stdin and print parsed IPs.
@@ -277,7 +278,9 @@ ip_equal() {
 
 is_allowlisted() {
   local ip="$1" entry
-  for entry in $VEXYL_ALLOWLIST; do
+  local -a entries=()
+  read -r -a entries <<<"$VEXYL_ALLOWLIST"
+  for entry in "${entries[@]}"; do
     [ "$entry" = "$ip" ] && return 0
     if [[ "$entry" == */* ]]; then
       cidr_contains "$ip" "$entry" && return 0
@@ -2091,6 +2094,312 @@ release_version: $release_version
 EOF
 }
 
+VALIDATION_ERRORS=0
+VALIDATION_WARNINGS=0
+VALIDATION_CHECKS=0
+
+validation_emit() {
+  local level="$1"
+  shift
+  VALIDATION_CHECKS=$((VALIDATION_CHECKS + 1))
+  case "$level" in
+    error) VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1)) ;;
+    warning) VALIDATION_WARNINGS=$((VALIDATION_WARNINGS + 1)) ;;
+  esac
+  printf '%-7s %s\n' "[$level]" "$*"
+}
+
+validate_integer_setting() {
+  local name="$1" value="$2" minimum="$3" maximum="$4" number
+  [[ "$value" =~ ^[0-9]{1,10}$ ]] || {
+    validation_emit error "$name must be an integer between $minimum and $maximum."
+    return
+  }
+  number="$((10#$value))"
+  if [ "$number" -lt "$minimum" ] || [ "$number" -gt "$maximum" ]; then
+    validation_emit error "$name must be between $minimum and $maximum."
+  else
+    validation_emit ok "$name is within its supported range."
+  fi
+}
+
+validate_allowlist() {
+  local entry network prefix prefix_number index=0
+  local -a entries=()
+  read -r -a entries <<<"$VEXYL_ALLOWLIST"
+  if [ "${#entries[@]}" -eq 0 ]; then
+    validation_emit warning "The allowlist is empty; confirm operator access before enforcement."
+    return
+  fi
+
+  for entry in "${entries[@]}"; do
+    index=$((index + 1))
+    if [[ "$entry" == */* ]]; then
+      network="${entry%/*}"
+      prefix="${entry##*/}"
+      if [[ "$network" == */* ]] || ! cidr_contains "$network" "$entry"; then
+        validation_emit error "Allowlist entry $index is not a valid IPv4 or IPv6 CIDR."
+        continue
+      fi
+      prefix_number="$((10#$prefix))"
+      if [ "$prefix_number" -eq 0 ]; then
+        validation_emit error "Allowlist entry $index covers an entire address family and disables protection for it."
+      elif { is_ipv4 "$network" && [ "$prefix_number" -lt 8 ]; } || { is_ipv6 "$network" && [ "$prefix_number" -lt 16 ]; }; then
+        validation_emit warning "Allowlist entry $index covers an unusually broad network."
+      else
+        validation_emit ok "Allowlist entry $index is valid."
+      fi
+    elif valid_ip "$entry"; then
+      validation_emit ok "Allowlist entry $index is valid."
+    else
+      validation_emit error "Allowlist entry $index is not a valid IP address."
+    fi
+  done
+}
+
+count_readable_log_sources() {
+  local file count=0
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    count=$((count + 1))
+  done < <(
+    existing_auth_logs
+    existing_web_logs
+    existing_mail_logs
+    existing_firewall_logs
+    existing_vpn_logs
+    existing_database_logs
+    existing_object_storage_logs
+    existing_edge_logs
+  )
+  printf '%s' "$count"
+}
+
+validate_config_file_permissions() {
+  local permissions group_digit other_digit
+  if [ ! -r "$CONFIG_FILE" ]; then
+    validation_emit error "The configuration file is missing or unreadable."
+    return
+  fi
+  validation_emit ok "The configuration file is readable."
+
+  command -v stat >/dev/null 2>&1 || return 0
+  permissions="$(stat -c '%a' "$CONFIG_FILE" 2>/dev/null || true)"
+  [[ "$permissions" =~ ^[0-7]{3,4}$ ]] || return 0
+  group_digit="${permissions: -2:1}"
+  other_digit="${permissions: -1}"
+  case "$group_digit:$other_digit" in
+    2:*|3:*|6:*|7:*|*:2|*:3|*:6|*:7)
+      validation_emit error "The configuration file must not be group- or world-writable."
+      ;;
+    *) validation_emit ok "The configuration file is not group- or world-writable." ;;
+  esac
+}
+
+validate_firewall_config() {
+  local backend
+  case "$VEXYL_FIREWALL" in
+    auto|nft|iptables|none) ;;
+    *)
+      validation_emit error "VEXYL_FIREWALL must be auto, nft, iptables, or none."
+      return
+      ;;
+  esac
+
+  backend="$(detect_firewall)"
+  if [ "$VEXYL_MODE" = "enforce" ] && [ "$backend" = "none" ]; then
+    validation_emit error "Enforcement requires nftables or iptables, but neither is selected and available."
+    return
+  fi
+  if [ "$VEXYL_FIREWALL" = "nft" ] && ! command -v nft >/dev/null 2>&1; then
+    validation_emit error "The nft firewall backend is selected but the nft command is unavailable."
+    return
+  fi
+  if [ "$VEXYL_FIREWALL" = "iptables" ] && ! command -v iptables >/dev/null 2>&1; then
+    validation_emit error "The iptables firewall backend is selected but the iptables command is unavailable."
+    return
+  fi
+  if [ "$backend" = "none" ]; then
+    validation_emit warning "No firewall backend is available; monitor mode can run but cannot enforce blocks."
+  else
+    validation_emit ok "Firewall backend $backend is available."
+  fi
+}
+
+validate_api_config() {
+  if { [ -n "$VEXYL_API_URL" ] && [ -z "$VEXYL_API_TOKEN" ]; } || { [ -z "$VEXYL_API_URL" ] && [ -n "$VEXYL_API_TOKEN" ]; }; then
+    validation_emit error "VEXYL_API_URL and VEXYL_API_TOKEN must be configured together."
+    return
+  fi
+  if [ -z "$VEXYL_API_URL" ]; then
+    validation_emit ok "The agent is configured for local-only operation."
+    return
+  fi
+
+  if [[ "$VEXYL_API_URL" =~ ^https://[^/?#[:space:]]+([/?#][^[:space:]]*)?$ ]]; then
+    validation_emit ok "The companion API uses HTTPS."
+  elif [[ "$VEXYL_API_URL" =~ ^http://(127\.0\.0\.1|localhost|\[::1\])(:[0-9]{1,5})?([/?#][^[:space:]]*)?$ ]]; then
+    validation_emit warning "The companion API uses loopback HTTP; use HTTPS outside local development."
+  elif [[ "$VEXYL_API_URL" == http://* ]]; then
+    validation_emit error "The companion API must use HTTPS outside loopback development."
+  else
+    validation_emit error "VEXYL_API_URL must be a valid HTTP or HTTPS URL."
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    validation_emit error "The companion API is configured but curl is unavailable."
+  fi
+}
+
+public_key_file_valid() {
+  openssl pkey -pubin -in "$1" -noout >/dev/null 2>&1
+}
+
+invalid_policy_public_key_count() {
+  local checked=0 invalid=0 key
+  if [ -n "$VEXYL_POLICY_PUBLIC_KEY_DIR" ] && [ -d "$VEXYL_POLICY_PUBLIC_KEY_DIR" ]; then
+    for key in "$VEXYL_POLICY_PUBLIC_KEY_DIR"/*.pem; do
+      [ -r "$key" ] || continue
+      checked=$((checked + 1))
+      public_key_file_valid "$key" || invalid=$((invalid + 1))
+    done
+  fi
+  if [ "$checked" -eq 0 ] && [ -n "$VEXYL_POLICY_PUBLIC_KEY_FILE" ] && [ -r "$VEXYL_POLICY_PUBLIC_KEY_FILE" ]; then
+    public_key_file_valid "$VEXYL_POLICY_PUBLIC_KEY_FILE" || invalid=$((invalid + 1))
+  fi
+  printf '%s' "$invalid"
+}
+
+validate_trust_config() {
+  local trusted_keys invalid_keys
+  trusted_keys="$(policy_public_key_count)"
+  if [ -s "$VEXYL_RELEASE_PUBLIC_KEY_FILE" ]; then
+    if ! command -v openssl >/dev/null 2>&1; then
+      validation_emit error "The release verification key is configured but openssl is unavailable."
+    elif public_key_file_valid "$VEXYL_RELEASE_PUBLIC_KEY_FILE"; then
+      validation_emit ok "The release verification key is valid and readable."
+    else
+      validation_emit error "The release verification key is not a valid PEM public key."
+    fi
+  else
+    validation_emit warning "The release verification key is unavailable; signed upgrades cannot run."
+  fi
+
+  if policy_bundle_required_without_verifier && ! policy_bundle_verifier_configured; then
+    validation_emit error "Signed policy bundles are required but no verifier is configured."
+  elif policy_bundle_public_key_configured; then
+    if ! command -v openssl >/dev/null 2>&1; then
+      validation_emit error "Policy verification keys are configured but openssl is unavailable."
+    else
+      invalid_keys="$(invalid_policy_public_key_count)"
+      if [ "$invalid_keys" -gt 0 ]; then
+        validation_emit error "$invalid_keys policy verification key(s) are not valid PEM public keys."
+      else
+        validation_emit ok "$trusted_keys valid policy verification key(s) are available."
+      fi
+    fi
+  elif policy_bundle_secret_configured; then
+    if command -v openssl >/dev/null 2>&1; then
+      validation_emit warning "Legacy shared-secret policy verification is configured; public-key verification is preferred."
+    else
+      validation_emit error "Shared-secret policy verification is configured but openssl is unavailable."
+    fi
+  elif [ -n "$VEXYL_API_URL" ] && ! policy_bundle_disabled; then
+    validation_emit warning "No signed policy verifier is configured; remote policy will use legacy compatibility mode."
+  else
+    validation_emit ok "No remote signed-policy verifier is required for this local configuration."
+  fi
+
+}
+
+validate_ai_intel_config() {
+  local status
+  status="$(ai_intel_status)"
+  case "$status" in
+    disabled) validation_emit ok "Local AI threat-intelligence scoring is disabled by policy." ;;
+    ready) validation_emit ok "Local AI threat-intelligence scoring is ready." ;;
+    will_seed) validation_emit warning "The AI threat database is absent and will be seeded at first use." ;;
+    missing_cli)
+      if ai_intel_required; then
+        validation_emit error "AI threat-intelligence scoring is required but the vexyl CLI is unavailable."
+      else
+        validation_emit warning "The vexyl CLI is unavailable; AI threat-intelligence enrichment will remain inactive."
+      fi
+      ;;
+    unseeded)
+      if ai_intel_required; then
+        validation_emit error "AI threat-intelligence scoring is required but its database is unseeded."
+      else
+        validation_emit warning "The AI threat database is unseeded; core host detection remains active."
+      fi
+      ;;
+  esac
+}
+
+validate_config() {
+  local readable_logs state_parent
+  VALIDATION_ERRORS=0
+  VALIDATION_WARNINGS=0
+  VALIDATION_CHECKS=0
+  printf 'Vexyl Guard configuration preflight\n'
+
+  validate_config_file_permissions
+
+  case "$VEXYL_MODE" in
+    monitor|enforce) validation_emit ok "Operating mode is $VEXYL_MODE." ;;
+    *) validation_emit error "VEXYL_MODE must be monitor or enforce." ;;
+  esac
+
+  validate_integer_setting VEXYL_THRESHOLD "$VEXYL_THRESHOLD" 1 1000000
+  validate_integer_setting VEXYL_WINDOW_SECONDS "$VEXYL_WINDOW_SECONDS" 1 31536000
+  validate_integer_setting VEXYL_BLOCK_SECONDS "$VEXYL_BLOCK_SECONDS" 1 315360000
+  validate_integer_setting VEXYL_BOOTSTRAP_LINES "$VEXYL_BOOTSTRAP_LINES" 1 10000000
+  validate_integer_setting VEXYL_POLICY_SYNC_SECONDS "$VEXYL_POLICY_SYNC_SECONDS" 1 31536000
+  validate_integer_setting VEXYL_HEARTBEAT_SECONDS "$VEXYL_HEARTBEAT_SECONDS" 60 31536000
+  validate_integer_setting VEXYL_MUTATION_CATEGORY_THRESHOLD "$VEXYL_MUTATION_CATEGORY_THRESHOLD" 2 1000000
+  validate_integer_setting VEXYL_MUTATION_WEIGHT "$VEXYL_MUTATION_WEIGHT" 1 1000000
+  validate_integer_setting VEXYL_AI_INTEL_SIGNAL_SCORE "$VEXYL_AI_INTEL_SIGNAL_SCORE" 0 100
+  validate_integer_setting VEXYL_AI_INTEL_SIGNAL_WEIGHT "$VEXYL_AI_INTEL_SIGNAL_WEIGHT" 1 1000000
+
+  validate_allowlist
+  validate_firewall_config
+  validate_api_config
+
+  if [ -d "$VEXYL_STATE_DIR" ]; then
+    if [ -w "$VEXYL_STATE_DIR" ]; then
+      validation_emit ok "The state directory is writable by the current user."
+    else
+      validation_emit warning "The state directory is not writable by the current user; verify the service account can write it."
+    fi
+  else
+    state_parent="$(dirname "$VEXYL_STATE_DIR")"
+    if [ -d "$state_parent" ] && [ -w "$state_parent" ]; then
+      validation_emit ok "The state directory can be created by the current user."
+    else
+      validation_emit warning "The state directory does not exist; verify the service can create it."
+    fi
+  fi
+
+  readable_logs="$(count_readable_log_sources)"
+  if [ "$readable_logs" -gt 0 ]; then
+    validation_emit ok "$readable_logs readable log source(s) were found."
+  elif command -v journalctl >/dev/null 2>&1; then
+    validation_emit warning "No configured log files are readable; the agent will fall back to SSH journal entries."
+  else
+    validation_emit error "No configured log files are readable and journalctl is unavailable."
+  fi
+
+  validate_trust_config
+  validate_ai_intel_config
+
+  printf 'summary: %s check(s), %s warning(s), %s error(s)\n' "$VALIDATION_CHECKS" "$VALIDATION_WARNINGS" "$VALIDATION_ERRORS"
+  if [ "$VALIDATION_ERRORS" -gt 0 ]; then
+    printf 'result: invalid configuration\n'
+    return 78
+  fi
+  printf 'result: valid configuration\n'
+}
+
 safe_os_field() {
   local field="$1" value
   value="$(sed -nE "s/^${field}=//p" /etc/os-release 2>/dev/null | head -n 1)"
@@ -2371,8 +2680,10 @@ Wants=network-online.target
 [Service]
 Type=simple
 EnvironmentFile=-/etc/vexyl/guard.conf
+ExecStartPre=/usr/local/sbin/vexyl-guard validate-config
 ExecStart=/usr/local/sbin/vexyl-guard daemon
 Restart=always
+RestartPreventExitStatus=78
 RestartSec=5s
 StateDirectory=vexyl
 ConfigurationDirectory=vexyl
@@ -2528,6 +2839,7 @@ main() {
     upgrade) upgrade_agent "${2:-}" ;;
     verify-policy) ensure_state; [ -n "${2:-}" ] || die "verify-policy requires a bundle JSON file"; verify_policy_bundle_file "$2" || exit 1 ;;
     status) ensure_state; status ;;
+    validate-config) validate_config ;;
     support-report) ensure_state; support_report ;;
     unblock) ensure_state; [ -n "${2:-}" ] || die "unblock requires an IP"; unblock_ip "$2" ;;
     test-parse) test_parse ;;

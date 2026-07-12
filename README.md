@@ -174,6 +174,14 @@ VEXYL_ALERT_RECIPIENTS
 - Local IPv4/IPv6 address and CIDR allowlists are checked before scoring or blocking.
 - Firewall changes are plain local `nftables`/`iptables` rules, not hidden persistence.
 
+Validate the effective host configuration before starting the service or changing to enforcement mode:
+
+```bash
+sudo vexyl-guard validate-config
+```
+
+Warnings describe optional or degraded capabilities. Configuration errors return a nonzero exit status and should be resolved before enforcement.
+
 ## Tests
 
 ```bash

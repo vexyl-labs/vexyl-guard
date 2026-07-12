@@ -213,6 +213,103 @@ if [ -s "$ALLOWLIST_ZERO_STATE_DIR/scores.tsv" ]; then
 fi
 printf 'ok - zero-prefix CIDR allowlists\n'
 
+VALIDATION_STATE_DIR="$TMP_DIR/validation-state"
+VALIDATION_KEY_DIR="$TMP_DIR/validation-policy-keys"
+mkdir -p "$VALIDATION_STATE_DIR" "$VALIDATION_KEY_DIR"
+cp "$ROOT_DIR/config/release-signing-public.pem" "$TMP_DIR/validation-release.pem"
+cp "$ROOT_DIR/config/policy-signing-public.pem" "$VALIDATION_KEY_DIR/test-key.pem"
+VALID_CONFIG="$TMP_DIR/valid.conf"
+cat >"$VALID_CONFIG" <<EOF
+VEXYL_MODE=monitor
+VEXYL_FIREWALL=none
+VEXYL_ALLOWLIST="127.0.0.1 192.0.2.0/24 ::1"
+VEXYL_STATE_DIR=$VALIDATION_STATE_DIR
+VEXYL_AUTH_LOGS=$FIXTURES/auth.log
+VEXYL_WEB_LOGS=$TMP_DIR/missing-web.log
+VEXYL_MAIL_LOGS=$TMP_DIR/missing-mail.log
+VEXYL_FIREWALL_LOGS=$TMP_DIR/missing-firewall.log
+VEXYL_VPN_LOGS=$TMP_DIR/missing-vpn.log
+VEXYL_DATABASE_LOGS=$TMP_DIR/missing-database.log
+VEXYL_OBJECT_STORAGE_LOGS=$TMP_DIR/missing-object-storage.log
+VEXYL_EDGE_LOGS=$TMP_DIR/missing-edge.log
+VEXYL_RELEASE_PUBLIC_KEY_FILE=$TMP_DIR/validation-release.pem
+VEXYL_POLICY_PUBLIC_KEY_DIR=$VALIDATION_KEY_DIR
+VEXYL_AI_INTEL_ENABLED=false
+EOF
+chmod 0600 "$VALID_CONFIG"
+
+VEXYL_CONFIG_FILE="$VALID_CONFIG" "$AGENT" validate-config >"$TMP_DIR/valid-config.out"
+if ! grep -q '^result: valid configuration$' "$TMP_DIR/valid-config.out"; then
+  printf 'not ok - valid configuration preflight\n' >&2
+  sed -n '1,160p' "$TMP_DIR/valid-config.out" >&2
+  exit 1
+fi
+printf 'ok - valid configuration preflight\n'
+
+INVALID_CONFIG="$TMP_DIR/invalid.conf"
+cat >"$INVALID_CONFIG" <<EOF
+VEXYL_MODE=enforce
+VEXYL_FIREWALL=none
+VEXYL_ALLOWLIST="0.0.0.0/0 not-a-network"
+VEXYL_THRESHOLD=invalid
+VEXYL_API_URL=https://api.example.test
+VEXYL_STATE_DIR=$VALIDATION_STATE_DIR
+VEXYL_AUTH_LOGS=$FIXTURES/auth.log
+VEXYL_RELEASE_PUBLIC_KEY_FILE=$TMP_DIR/missing-release.pem
+VEXYL_POLICY_PUBLIC_KEY_DIR=$TMP_DIR/missing-policy-keys
+VEXYL_POLICY_PUBLIC_KEY_FILE=$TMP_DIR/missing-policy.pem
+VEXYL_POLICY_BUNDLE_ENABLED=true
+VEXYL_AI_INTEL_ENABLED=false
+EOF
+chmod 0600 "$INVALID_CONFIG"
+
+set +e
+VEXYL_CONFIG_FILE="$INVALID_CONFIG" "$AGENT" validate-config >"$TMP_DIR/invalid-config.out"
+INVALID_CONFIG_STATUS=$?
+set -e
+if [ "$INVALID_CONFIG_STATUS" -ne 78 ]; then
+  printf 'not ok - invalid configuration rejected\n' >&2
+  printf 'expected exit 78, received %s\n' "$INVALID_CONFIG_STATUS" >&2
+  sed -n '1,200p' "$TMP_DIR/invalid-config.out" >&2
+  exit 1
+fi
+for expected in \
+  'VEXYL_THRESHOLD must be an integer' \
+  'covers an entire address family' \
+  'is not a valid IP address' \
+  'Enforcement requires nftables or iptables' \
+  'VEXYL_API_URL and VEXYL_API_TOKEN must be configured together' \
+  'Signed policy bundles are required but no verifier is configured' \
+  'result: invalid configuration'; do
+  if ! grep -q "$expected" "$TMP_DIR/invalid-config.out"; then
+    printf 'not ok - invalid configuration reports %s\n' "$expected" >&2
+    sed -n '1,200p' "$TMP_DIR/invalid-config.out" >&2
+    exit 1
+  fi
+done
+printf 'ok - invalid configuration rejected with actionable errors\n'
+
+UNSAFE_URL_CONFIG="$TMP_DIR/unsafe-url.conf"
+cp "$VALID_CONFIG" "$UNSAFE_URL_CONFIG"
+cat >>"$UNSAFE_URL_CONFIG" <<'EOF'
+VEXYL_API_URL=http://localhost.evil.example/v1
+VEXYL_API_TOKEN=must-not-appear-in-output
+EOF
+set +e
+VEXYL_CONFIG_FILE="$UNSAFE_URL_CONFIG" "$AGENT" validate-config >"$TMP_DIR/unsafe-url-config.out"
+UNSAFE_URL_STATUS=$?
+set -e
+if [ "$UNSAFE_URL_STATUS" -ne 78 ] || ! grep -q 'must use HTTPS outside loopback' "$TMP_DIR/unsafe-url-config.out"; then
+  printf 'not ok - loopback lookalike API URL rejected\n' >&2
+  sed -n '1,200p' "$TMP_DIR/unsafe-url-config.out" >&2
+  exit 1
+fi
+if grep -q 'must-not-appear-in-output' "$TMP_DIR/unsafe-url-config.out"; then
+  printf 'not ok - configuration preflight redacts API token\n' >&2
+  exit 1
+fi
+printf 'ok - loopback lookalike API URL rejected without exposing credentials\n'
+
 SUPPORT_STATE_DIR="$TMP_DIR/support-state"
 mkdir -p "$SUPPORT_STATE_DIR"
 cat >"$SUPPORT_STATE_DIR/release.json" <<'JSON'
