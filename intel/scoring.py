@@ -303,6 +303,9 @@ class _RiskAccumulator:
         if reason not in self.reasons:
             self.reasons.append(reason)
 
+    def require_score(self, minimum: int) -> None:
+        self.score = max(self.score, minimum)
+
     def apply_mitigation(self, name: str, delta: int) -> None:
         self.score += delta
         self.mitigations_applied.append(name)
@@ -356,6 +359,7 @@ def score_ai_event(event: RuntimeAIEvent | dict[str, Any], db_path: str | None =
                 "External/RAG content attempted to provide model or tool instructions.",
                 extra=6,
             )
+            acc.require_score(70)
         if runtime_event.data_origin in {"system", "developer"}:
             acc.add_attack(
                 "AI-PI-002",

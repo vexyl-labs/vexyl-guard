@@ -178,9 +178,10 @@ VEXYL_ALERT_RECIPIENTS
 
 ```bash
 tests/run-agent-fixtures.sh
+python3 -m unittest tests/test_public_intel.py -v
 ```
 
-The GitHub Actions workflow runs the same safe fixture checks.
+The GitHub Actions workflow runs the same safe fixture and public AI threat-intelligence contract checks.
 
 ## Security
 

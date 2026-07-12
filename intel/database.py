@@ -556,7 +556,10 @@ def seed_db(db_path: str | Path | None = None, seed_path: str | Path | None = No
 def load_seed_records(seed_path: str | Path | None = None) -> list[dict[str, Any]]:
     path = Path(seed_path) if seed_path else SEED_PATH
     if not path.exists() and seed_path is None:
-        return [dict(record) for record in PUBLIC_SEED_RECORDS]
+        records = [dict(record) for record in PUBLIC_SEED_RECORDS]
+        for line_number, record in enumerate(records, start=1):
+            validate_seed_record(record, line_number)
+        return records
     records: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
