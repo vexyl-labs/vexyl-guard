@@ -147,6 +147,72 @@ awk -F '\t' '{ print $1 "\t" $2 "\t" $5 }' "$STORAGE_EDGE_STATE_DIR/scores.tsv" 
 sort "$FIXTURES/expected-storage-edge-score.tsv" >"$TMP_DIR/expected-storage-edge-score.sorted"
 compare "$TMP_DIR/expected-storage-edge-score.sorted" "$TMP_DIR/storage-edge-score.out" "object storage and edge scoring"
 
+ALLOWLIST_LOG="$TMP_DIR/allowlist-web.log"
+cat >"$ALLOWLIST_LOG" <<'EOF'
+192.0.2.25 - - [12/Jul/2026:12:00:00 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+192.0.2.200 - - [12/Jul/2026:12:00:01 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+2001:db8:abcd:a000::25 - - [12/Jul/2026:12:00:02 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+2001:db8:abcd:4000::25 - - [12/Jul/2026:12:00:03 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+198.51.100.7 - - [12/Jul/2026:12:00:04 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+0:0:0:0:0:0:0:1 - - [12/Jul/2026:12:00:05 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+203.0.113.8 - - [12/Jul/2026:12:00:06 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+EOF
+
+ALLOWLIST_STATE_DIR="$TMP_DIR/allowlist-state"
+VEXYL_CONFIG_FILE="$EMPTY_CONFIG" \
+VEXYL_STATE_DIR="$ALLOWLIST_STATE_DIR" \
+VEXYL_AUTH_LOGS="$TMP_DIR/missing-auth.log" \
+VEXYL_WEB_LOGS="$ALLOWLIST_LOG" \
+VEXYL_MAIL_LOGS="$TMP_DIR/missing-mail.log" \
+VEXYL_FIREWALL_LOGS="$TMP_DIR/missing-firewall.log" \
+VEXYL_VPN_LOGS="$TMP_DIR/missing-vpn.log" \
+VEXYL_DATABASE_LOGS="$TMP_DIR/missing-database.log" \
+VEXYL_OBJECT_STORAGE_LOGS="$TMP_DIR/missing-object-storage.log" \
+VEXYL_EDGE_LOGS="$TMP_DIR/missing-edge.log" \
+VEXYL_ALLOWLIST="192.0.2.0/25 2001:db8:abcd:8000::/49 198.51.100.7 ::1 203.0.113.0/not-a-prefix" \
+VEXYL_MODE=monitor \
+VEXYL_FIREWALL=none \
+VEXYL_THRESHOLD=999 \
+"$AGENT" once >"$TMP_DIR/allowlist-once.log"
+
+cut -f 1 "$ALLOWLIST_STATE_DIR/scores.tsv" | sort >"$TMP_DIR/allowlist-score-ips.out"
+cat >"$TMP_DIR/allowlist-score-ips.expected" <<'EOF'
+192.0.2.200
+2001:db8:abcd:4000::25
+203.0.113.8
+EOF
+compare "$TMP_DIR/allowlist-score-ips.expected" "$TMP_DIR/allowlist-score-ips.out" "IPv4 and IPv6 CIDR allowlists"
+
+ALLOWLIST_ZERO_LOG="$TMP_DIR/allowlist-zero-web.log"
+cat >"$ALLOWLIST_ZERO_LOG" <<'EOF'
+198.18.0.1 - - [12/Jul/2026:12:01:00 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+fd00:1234::1 - - [12/Jul/2026:12:01:01 +0000] "GET /.env HTTP/1.1" 404 0 "-" "curl/8.0"
+EOF
+
+ALLOWLIST_ZERO_STATE_DIR="$TMP_DIR/allowlist-zero-state"
+VEXYL_CONFIG_FILE="$EMPTY_CONFIG" \
+VEXYL_STATE_DIR="$ALLOWLIST_ZERO_STATE_DIR" \
+VEXYL_AUTH_LOGS="$TMP_DIR/missing-auth.log" \
+VEXYL_WEB_LOGS="$ALLOWLIST_ZERO_LOG" \
+VEXYL_MAIL_LOGS="$TMP_DIR/missing-mail.log" \
+VEXYL_FIREWALL_LOGS="$TMP_DIR/missing-firewall.log" \
+VEXYL_VPN_LOGS="$TMP_DIR/missing-vpn.log" \
+VEXYL_DATABASE_LOGS="$TMP_DIR/missing-database.log" \
+VEXYL_OBJECT_STORAGE_LOGS="$TMP_DIR/missing-object-storage.log" \
+VEXYL_EDGE_LOGS="$TMP_DIR/missing-edge.log" \
+VEXYL_ALLOWLIST="0.0.0.0/00 ::/000" \
+VEXYL_MODE=monitor \
+VEXYL_FIREWALL=none \
+VEXYL_THRESHOLD=999 \
+"$AGENT" once >"$TMP_DIR/allowlist-zero-once.log"
+
+if [ -s "$ALLOWLIST_ZERO_STATE_DIR/scores.tsv" ]; then
+  printf 'not ok - zero-prefix CIDR allowlists\n' >&2
+  sed -n '1,80p' "$ALLOWLIST_ZERO_STATE_DIR/scores.tsv" >&2
+  exit 1
+fi
+printf 'ok - zero-prefix CIDR allowlists\n'
+
 SUPPORT_STATE_DIR="$TMP_DIR/support-state"
 mkdir -p "$SUPPORT_STATE_DIR"
 cat >"$SUPPORT_STATE_DIR/release.json" <<'JSON'

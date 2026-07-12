@@ -26,9 +26,8 @@ VEXYL_RELEASE_PUBLIC_KEY_FILE=/etc/vexyl/release-signing-public.pem
 # Firewall backend: auto, nft, iptables, none.
 VEXYL_FIREWALL=auto
 
-# Space-separated IPs/CIDRs to never block. Exact IP matches are enforced by
-# the agent. CIDR entries are documented for operator clarity and future use;
-# today the agent only applies exact allowlist matches.
+# Space-separated IPv4/IPv6 addresses or CIDR ranges to never score or block.
+# Keep this list narrow and limited to trusted operator or management networks.
 VEXYL_ALLOWLIST="127.0.0.1 ::1"
 
 # Existing auth logs are auto-detected from this list.

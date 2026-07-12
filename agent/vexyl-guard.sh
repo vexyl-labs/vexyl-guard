@@ -124,28 +124,166 @@ ensure_state() {
 }
 
 is_ipv4() {
-  local ip="$1" octet
+  local ip="$1" octet o1 o2 o3 o4
   [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
   IFS=. read -r o1 o2 o3 o4 <<<"$ip"
   for octet in "$o1" "$o2" "$o3" "$o4"; do
-    [ "$octet" -ge 0 ] 2>/dev/null && [ "$octet" -le 255 ] 2>/dev/null || return 1
+    [ "$((10#$octet))" -le 255 ] || return 1
   done
 }
 
-is_ipv6() {
-  local ip="$1"
+ipv4_to_number() {
+  local ip="$1" o1 o2 o3 o4
+  is_ipv4 "$ip" || return 1
+  IFS=. read -r o1 o2 o3 o4 <<<"$ip"
+  printf '%u' "$((
+    (10#$o1 << 24) |
+    (10#$o2 << 16) |
+    (10#$o3 << 8) |
+    10#$o4
+  ))"
+}
+
+normalize_ipv6() {
+  local ip="$1" ipv4_tail left right remainder part formatted
+  local ipv4_high ipv4_low zero_count
+  local o1 o2 o3 o4
+  local -a left_parts=() right_parts=() normalized=()
+
   [[ "$ip" == *:* ]] || return 1
   [[ "$ip" =~ ^[0-9A-Fa-f:.]+$ ]] || return 1
+  [[ "$ip" != *:::* ]] || return 1
+
+  if [[ "$ip" == *.* ]]; then
+    ipv4_tail="${ip##*:}"
+    is_ipv4 "$ipv4_tail" || return 1
+    IFS=. read -r o1 o2 o3 o4 <<<"$ipv4_tail"
+    ipv4_high="$((10#$o1 * 256 + 10#$o2))"
+    ipv4_low="$((10#$o3 * 256 + 10#$o4))"
+    printf -v ipv4_tail '%x:%x' "$ipv4_high" "$ipv4_low"
+    ip="${ip%:*}:$ipv4_tail"
+  fi
+
+  if [[ "$ip" == *::* ]]; then
+    left="${ip%%::*}"
+    remainder="${ip#*::}"
+    [[ "$remainder" != *::* ]] || return 1
+    right="$remainder"
+    [ -z "$left" ] || IFS=: read -r -a left_parts <<<"$left"
+    [ -z "$right" ] || IFS=: read -r -a right_parts <<<"$right"
+    zero_count="$((8 - ${#left_parts[@]} - ${#right_parts[@]}))"
+    [ "$zero_count" -ge 1 ] || return 1
+  else
+    [[ "$ip" != :* && "$ip" != *: ]] || return 1
+    IFS=: read -r -a left_parts <<<"$ip"
+    [ "${#left_parts[@]}" -eq 8 ] || return 1
+    zero_count=0
+  fi
+
+  for part in "${left_parts[@]}"; do
+    [[ "$part" =~ ^[0-9A-Fa-f]{1,4}$ ]] || return 1
+    printf -v formatted '%04x' "$((16#$part))"
+    normalized+=("$formatted")
+  done
+  while [ "$zero_count" -gt 0 ]; do
+    normalized+=("0000")
+    zero_count="$((zero_count - 1))"
+  done
+  for part in "${right_parts[@]}"; do
+    [[ "$part" =~ ^[0-9A-Fa-f]{1,4}$ ]] || return 1
+    printf -v formatted '%04x' "$((16#$part))"
+    normalized+=("$formatted")
+  done
+
+  [ "${#normalized[@]}" -eq 8 ] || return 1
+  printf '%s ' "${normalized[@]}"
+}
+
+is_ipv6() {
+  normalize_ipv6 "$1" >/dev/null
 }
 
 valid_ip() {
   is_ipv4 "$1" || is_ipv6 "$1"
 }
 
+ipv4_cidr_contains() {
+  local ip="$1" network="$2" prefix="$3" prefix_number ip_number network_number shift
+  [[ "$prefix" =~ ^[0-9]{1,3}$ ]] || return 1
+  prefix_number="$((10#$prefix))"
+  [ "$prefix_number" -le 32 ] || return 1
+  ip_number="$(ipv4_to_number "$ip")" || return 1
+  network_number="$(ipv4_to_number "$network")" || return 1
+  [ "$prefix_number" -gt 0 ] || return 0
+  shift="$((32 - prefix_number))"
+  [ "$((ip_number >> shift))" -eq "$((network_number >> shift))" ]
+}
+
+ipv6_cidr_contains() {
+  local ip="$1" network="$2" prefix="$3" prefix_number index bits mask ip_value network_value
+  local -a ip_groups=() network_groups=()
+  [[ "$prefix" =~ ^[0-9]{1,3}$ ]] || return 1
+  prefix_number="$((10#$prefix))"
+  [ "$prefix_number" -le 128 ] || return 1
+  read -r -a ip_groups <<<"$(normalize_ipv6 "$ip")" || return 1
+  read -r -a network_groups <<<"$(normalize_ipv6 "$network")" || return 1
+  bits="$prefix_number"
+
+  for ((index = 0; index < 8; index++)); do
+    [ "$bits" -gt 0 ] || return 0
+    if [ "$bits" -ge 16 ]; then
+      [ "${ip_groups[index]}" = "${network_groups[index]}" ] || return 1
+      bits="$((bits - 16))"
+      continue
+    fi
+
+    mask="$(((0xffff << (16 - bits)) & 0xffff))"
+    ip_value="$((16#${ip_groups[index]}))"
+    network_value="$((16#${network_groups[index]}))"
+    [ "$((ip_value & mask))" -eq "$((network_value & mask))" ]
+    return
+  done
+  return 0
+}
+
+cidr_contains() {
+  local ip="$1" cidr="$2" network prefix
+  [[ "$cidr" == */* ]] || return 1
+  network="${cidr%/*}"
+  prefix="${cidr##*/}"
+  [[ "$network" != */* ]] || return 1
+
+  if is_ipv4 "$ip" && is_ipv4 "$network"; then
+    ipv4_cidr_contains "$ip" "$network" "$prefix"
+  elif is_ipv6 "$ip" && is_ipv6 "$network"; then
+    ipv6_cidr_contains "$ip" "$network" "$prefix"
+  else
+    return 1
+  fi
+}
+
+ip_equal() {
+  local first="$1" second="$2" first_normalized second_normalized
+  if is_ipv4 "$first" && is_ipv4 "$second"; then
+    [ "$(ipv4_to_number "$first")" = "$(ipv4_to_number "$second")" ]
+  elif is_ipv6 "$first" && is_ipv6 "$second"; then
+    first_normalized="$(normalize_ipv6 "$first")" || return 1
+    second_normalized="$(normalize_ipv6 "$second")" || return 1
+    [ "$first_normalized" = "$second_normalized" ]
+  else
+    return 1
+  fi
+}
+
 is_allowlisted() {
   local ip="$1" entry
   for entry in $VEXYL_ALLOWLIST; do
     [ "$entry" = "$ip" ] && return 0
+    if [[ "$entry" == */* ]]; then
+      cidr_contains "$ip" "$entry" && return 0
+    else
+      ip_equal "$ip" "$entry" && return 0
+    fi
   done
   return 1
 }

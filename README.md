@@ -171,7 +171,7 @@ VEXYL_ALERT_RECIPIENTS
 
 - Monitor mode is the default.
 - Logs and local decisions redact secrets and avoid storing raw sensitive prompts.
-- Local allowlists are checked before scoring or blocking.
+- Local IPv4/IPv6 address and CIDR allowlists are checked before scoring or blocking.
 - Firewall changes are plain local `nftables`/`iptables` rules, not hidden persistence.
 
 ## Tests
