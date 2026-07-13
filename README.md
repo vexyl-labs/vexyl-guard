@@ -40,6 +40,7 @@ Vexyl Guard complements patching, access control, backups, firewall policy, and 
 - Resources: `https://vexyl.dev/resources/`
 - Verify before installing: `https://vexyl.dev/resources/verify-before-you-install/`
 - Public preview feedback: `https://github.com/vexyl-labs/vexyl-guard/issues/1`
+- Questions and discussion: `https://github.com/vexyl-labs/vexyl-guard/discussions`
 - Structured install report: `https://github.com/vexyl-labs/vexyl-guard/issues/new?template=install_feedback.yml`
 - Operator Notes: `https://vexyl.dev/updates/`
 - Sponsor Vexyl Labs: `https://github.com/sponsors/vexyl-labs`
