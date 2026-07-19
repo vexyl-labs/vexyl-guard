@@ -193,7 +193,18 @@ Vexyl Guard is not an Android antivirus, VPN, SSH client, third-party scanner, o
 
 ## Demo Video Plan
 
-Target length: **2 minutes 40 seconds**. Keep the final upload below three minutes. Record a clean terminal and the Vexyl Guard product page. Use spoken narration and no music. Do not show tokens, private logs, hostnames, IP addresses, customer data, browser bookmarks, notifications, or unrelated tabs.
+Target length: **2 minutes 40 seconds**. Keep the final upload below three minutes. Record a clean terminal and the Vexyl Guard product page. Use a clear human or generated voiceover and no music. Do not show tokens, private logs, hostnames, IP addresses, customer data, browser bookmarks, notifications, or unrelated tabs.
+
+### Generated Voiceover Workflow
+
+Generate the six narration blocks below as separate audio clips instead of one long file. This keeps each clip aligned with its shot and lets one section be corrected without regenerating the entire voiceover.
+
+- Use a neutral stock voice. Do not clone or imitate a real person.
+- Keep the speaking rate near normal, with roughly 0.25 seconds of silence at each clip boundary.
+- If needed, enter `Vex-ill` for pronunciation, but keep the visible product name and captions as `Vexyl`.
+- Enter `G P T five point six`, `Node dot J S`, and `system D` if the voice engine mispronounces the technical names. Correct the final captions to `GPT-5.6`, `Node.js`, and `systemd`.
+- Export the finished video as a 1080p H.264 MP4. Confirm the duration is below three minutes before uploading.
+- Enable captions on YouTube and manually correct `Vexyl Guard`, `Codex`, `GPT-5.6`, `Unix socket`, `Node.js`, and `systemd`.
 
 ### Shot List And Narration
 
@@ -265,6 +276,20 @@ https://github.com/vexyl-labs/vexyl-guard/releases/tag/v0.2.15
 Set visibility to **Public** and verify playback in a signed-out browser window. Do not add copyrighted music. Keep automatic captions enabled, then correct product names and technical terms before submitting the URL.
 
 ## Final Submission Checklist
+
+### Requirement Coverage
+
+| Build Week requirement | Vexyl Guard submission artifact |
+| --- | --- |
+| Working project | `./scripts/build-week-demo.sh` runs locally without root, network access, credentials, or a build step. |
+| Category | Developer Tools. |
+| Project description | Use the Short Description and Devpost Story above. |
+| Public demo video under three minutes | Shot list, narration, and YouTube copy are ready above; recording and upload remain manual. |
+| Public repository and license | `https://github.com/vexyl-labs/vexyl-guard`, Apache-2.0. |
+| Setup, sample data, and judge test path | The README Judge Quick Start uses bundled safe fallback records and a temporary database. |
+| Codex and GPT-5.6 contribution | The README and Devpost Story identify the accelerated work and the human-owned decisions. |
+| Developer-tool installation and platforms | The README documents package installation, source testing, supported Linux platforms, and the no-build judge demo. |
+| Codex session ID | Run `/feedback` in the main project thread and paste the returned ID into Devpost; this cannot be prefilled in the repository. |
 
 - Select **Developer Tools**.
 - Paste the tagline, short description, and Devpost story from this document.
