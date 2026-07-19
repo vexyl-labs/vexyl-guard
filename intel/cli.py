@@ -37,6 +37,18 @@ from .scoring import (
     score_ai_event,
     score_and_record_ai_event,
 )
+from .updates import (
+    DEFAULT_REVOKED_KEYS_FILE,
+    DEFAULT_TOKEN_FILE as DEFAULT_INTEL_TOKEN_FILE,
+    DEFAULT_TRUSTED_KEY_DIR,
+    IntelUpdateError,
+    apply_intel_bundle,
+    intel_update_status,
+    recover_intel_database,
+    rollback_intel_bundle,
+    sync_intel_bundle,
+    verify_intel_bundle,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -133,6 +145,73 @@ def main(argv: list[str] | None = None) -> int:
         help="Confirm deletion without an interactive prompt.",
     )
 
+    verify_bundle = threat_sub.add_parser(
+        "verify-intel-bundle",
+        help="Verify a signed defensive intelligence bundle without applying it.",
+    )
+    verify_bundle.add_argument("bundle")
+    add_intel_trust_arguments(verify_bundle)
+
+    apply_bundle = threat_sub.add_parser(
+        "apply-intel-bundle",
+        help="Verify and atomically activate a signed intelligence bundle.",
+    )
+    apply_bundle.add_argument("bundle")
+    add_intel_trust_arguments(apply_bundle, include_lkg=True)
+
+    sync_intel = threat_sub.add_parser(
+        "sync-intel",
+        help="Download, verify, and atomically activate signed intelligence.",
+    )
+    sync_intel.add_argument(
+        "--url",
+        default=os.environ.get("VEXYL_INTEL_BUNDLE_URL"),
+        help="HTTPS bundle endpoint. Defaults to VEXYL_INTEL_BUNDLE_URL.",
+    )
+    sync_intel.add_argument(
+        "--token-file",
+        default=os.environ.get("VEXYL_INTEL_TOKEN_FILE", DEFAULT_INTEL_TOKEN_FILE),
+        help="Private bearer token file used for bundle download.",
+    )
+    sync_intel.add_argument(
+        "--timeout",
+        type=float,
+        default=float(os.environ.get("VEXYL_INTEL_SYNC_TIMEOUT", "15")),
+    )
+    add_intel_trust_arguments(sync_intel, include_lkg=True)
+
+    intel_status = threat_sub.add_parser(
+        "intel-status",
+        help="Show signed intelligence version, freshness, and recovery status.",
+    )
+    intel_status.add_argument(
+        "--lkg",
+        default=os.environ.get("VEXYL_INTEL_LKG_DB"),
+        help="Optional last-known-good database path.",
+    )
+
+    rollback_intel = threat_sub.add_parser(
+        "rollback-intel",
+        help="Explicitly restore the last-known-good intelligence records.",
+    )
+    rollback_intel.add_argument(
+        "--lkg",
+        default=os.environ.get("VEXYL_INTEL_LKG_DB"),
+        help="Optional last-known-good database path.",
+    )
+    rollback_intel.add_argument("--yes", action="store_true")
+
+    recover_intel = threat_sub.add_parser(
+        "recover-intel",
+        help="Recover a corrupt intelligence database from last-known-good.",
+    )
+    recover_intel.add_argument(
+        "--lkg",
+        default=os.environ.get("VEXYL_INTEL_LKG_DB"),
+        help="Optional last-known-good database path.",
+    )
+    recover_intel.add_argument("--yes", action="store_true")
+
     gateway = subparsers.add_parser(
         "gateway", help="Run or query the authenticated local AI decision gateway."
     )
@@ -200,6 +279,16 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     db_path = args.db
+    if args.threat_command in {
+        "verify-intel-bundle",
+        "apply-intel-bundle",
+        "sync-intel",
+        "intel-status",
+        "rollback-intel",
+        "recover-intel",
+    }:
+        return handle_intel_update_command(args)
+
     if args.threat_command == "init-db":
         path = init_db(db_path)
         print_json({"ok": True, "db": str(path)})
@@ -317,6 +406,107 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     threat.print_help()
+    return 2
+
+
+def add_intel_trust_arguments(
+    parser: argparse.ArgumentParser, *, include_lkg: bool = False
+) -> None:
+    parser.add_argument(
+        "--trusted-key-dir",
+        default=os.environ.get("VEXYL_INTEL_TRUSTED_KEY_DIR", DEFAULT_TRUSTED_KEY_DIR),
+        help="Directory containing trusted RSA public keys named by bundle key id.",
+    )
+    parser.add_argument(
+        "--revoked-keys-file",
+        default=os.environ.get(
+            "VEXYL_INTEL_REVOKED_KEYS_FILE", DEFAULT_REVOKED_KEYS_FILE
+        ),
+        help="File containing revoked signing key ids.",
+    )
+    if include_lkg:
+        parser.add_argument(
+            "--lkg",
+            default=os.environ.get("VEXYL_INTEL_LKG_DB"),
+            help="Optional last-known-good database path.",
+        )
+
+
+def handle_intel_update_command(args: argparse.Namespace) -> int:
+    try:
+        if args.threat_command == "verify-intel-bundle":
+            verified = verify_intel_bundle(
+                args.bundle,
+                trusted_key_dir=args.trusted_key_dir,
+                revoked_keys_file=args.revoked_keys_file,
+            )
+            print_json({"ok": True, "bundle": verified.public_metadata()})
+            return 0
+
+        if args.threat_command == "apply-intel-bundle":
+            print_json(
+                apply_intel_bundle(
+                    args.bundle,
+                    db_path=args.db,
+                    trusted_key_dir=args.trusted_key_dir,
+                    revoked_keys_file=args.revoked_keys_file,
+                    lkg_path=args.lkg,
+                )
+            )
+            return 0
+
+        if args.threat_command == "sync-intel":
+            if not args.url:
+                raise IntelUpdateError("VEXYL_INTEL_BUNDLE_URL is not configured")
+            print_json(
+                sync_intel_bundle(
+                    url=args.url,
+                    token_file=args.token_file,
+                    db_path=args.db,
+                    trusted_key_dir=args.trusted_key_dir,
+                    revoked_keys_file=args.revoked_keys_file,
+                    lkg_path=args.lkg,
+                    timeout=args.timeout,
+                )
+            )
+            return 0
+
+        if args.threat_command == "intel-status":
+            print_json(
+                {
+                    "ok": True,
+                    "intelligence": intel_update_status(args.db, lkg_path=args.lkg),
+                }
+            )
+            return 0
+
+        if args.threat_command == "rollback-intel":
+            print_json(
+                rollback_intel_bundle(
+                    args.db,
+                    lkg_path=args.lkg,
+                    confirmed=args.yes,
+                )
+            )
+            return 0
+
+        if args.threat_command == "recover-intel":
+            if not args.yes:
+                raise IntelUpdateError(
+                    "explicit confirmation is required for intelligence recovery"
+                )
+            print_json(
+                recover_intel_database(
+                    args.db,
+                    lkg_path=args.lkg,
+                    only_if_corrupt=True,
+                )
+            )
+            return 0
+    except IntelUpdateError as exc:
+        print(f"Intelligence update error: {exc}", file=sys.stderr)
+        return 2
+
     return 2
 
 

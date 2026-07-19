@@ -134,15 +134,20 @@ EOF
     test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /usr/lib/systemd/system/vexyl-ai-gateway.service
+    test -f /usr/lib/systemd/system/vexyl-intel-update.service
+    test -f /usr/lib/systemd/system/vexyl-intel-update.timer
     test -f /usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
     test -f /usr/share/vexyl/integrations/node/vexyl-guard-middleware.mjs
     test -f /etc/vexyl/guard.conf
     test -f /etc/vexyl/ai-gateway.conf
+    test -f /etc/vexyl/intel-update.conf
     test "$(stat -c %a /etc/vexyl)" = 750
     test "$(stat -c %G /etc/vexyl)" = vexyl
     test "$(stat -c %a /etc/vexyl/ai-gateway.token)" = 640
     test "$(stat -c %G /etc/vexyl/ai-gateway.token)" = vexyl
     test ! -e /etc/systemd/system/multi-user.target.wants/vexyl-ai-gateway.service
+    test ! -e /etc/systemd/system/timers.target.wants/vexyl-intel-update.timer
+    test ! -e /etc/vexyl/intel-update.token
     grep -q "^VEXYL_AI_HISTORY_RETENTION_HOURS=24$" /etc/vexyl/guard.conf || {
       printf "APT package is missing the AI history retention default.\n" >&2
       exit 1
@@ -162,6 +167,11 @@ EOF
     runtime_status="$(vexyl threat --db /var/lib/vexyl/ai_threats.sqlite runtime-status)"
     grep -q "\"retention_hours\": 24" <<<"$runtime_status" || {
       printf "APT package runtime history status check failed:\n%s\n" "$runtime_status" >&2
+      exit 1
+    }
+    intel_status="$(vexyl threat --db /var/lib/vexyl/ai_threats.sqlite intel-status)"
+    grep -q "\"freshness\": \"unsigned\"" <<<"$intel_status" || {
+      printf "APT package intelligence update status check failed:\n%s\n" "$intel_status" >&2
       exit 1
     }
     VEXYL_AI_GATEWAY_DB=/tmp/vexyl-ai.sqlite \
@@ -212,15 +222,20 @@ EOF
     test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /usr/lib/systemd/system/vexyl-ai-gateway.service
+    test -f /usr/lib/systemd/system/vexyl-intel-update.service
+    test -f /usr/lib/systemd/system/vexyl-intel-update.timer
     test -f /usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
     test -f /usr/share/vexyl/integrations/node/vexyl-guard-middleware.mjs
     test -f /etc/vexyl/guard.conf
     test -f /etc/vexyl/ai-gateway.conf
+    test -f /etc/vexyl/intel-update.conf
     test "$(stat -c %a /etc/vexyl)" = 750
     test "$(stat -c %G /etc/vexyl)" = vexyl
     test "$(stat -c %a /etc/vexyl/ai-gateway.token)" = 640
     test "$(stat -c %G /etc/vexyl/ai-gateway.token)" = vexyl
     test ! -e /etc/systemd/system/multi-user.target.wants/vexyl-ai-gateway.service
+    test ! -e /etc/systemd/system/timers.target.wants/vexyl-intel-update.timer
+    test ! -e /etc/vexyl/intel-update.token
     grep -q "^VEXYL_AI_HISTORY_RETENTION_HOURS=24$" /etc/vexyl/guard.conf || {
       printf "DNF package is missing the AI history retention default.\n" >&2
       exit 1
@@ -240,6 +255,11 @@ EOF
     runtime_status="$(vexyl threat --db /var/lib/vexyl/ai_threats.sqlite runtime-status)"
     grep -q "\"retention_hours\": 24" <<<"$runtime_status" || {
       printf "DNF package runtime history status check failed:\n%s\n" "$runtime_status" >&2
+      exit 1
+    }
+    intel_status="$(vexyl threat --db /var/lib/vexyl/ai_threats.sqlite intel-status)"
+    grep -q "\"freshness\": \"unsigned\"" <<<"$intel_status" || {
+      printf "DNF package intelligence update status check failed:\n%s\n" "$intel_status" >&2
       exit 1
     }
     VEXYL_AI_GATEWAY_DB=/tmp/vexyl-ai.sqlite \

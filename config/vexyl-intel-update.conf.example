@@ -1,0 +1,9 @@
+# Vexyl Guard signed defensive intelligence updates.
+# Updates remain disabled until vexyl-intel-update.timer is explicitly enabled.
+VEXYL_INTEL_BUNDLE_URL=https://api.vexyl.dev/v1/ai-intel.bundle.json
+VEXYL_INTEL_TOKEN_FILE=/etc/vexyl/intel-update.token
+VEXYL_INTEL_TRUSTED_KEY_DIR=/etc/vexyl/policy-keys.d
+VEXYL_INTEL_REVOKED_KEYS_FILE=/etc/vexyl/revoked-policy-keys.txt
+VEXYL_INTEL_DB=/var/lib/vexyl/ai_threats.sqlite
+VEXYL_INTEL_LKG_DB=/var/lib/vexyl/ai_threats.sqlite.lkg
+VEXYL_INTEL_SYNC_TIMEOUT=15

@@ -24,8 +24,8 @@ jobs:
 
       - name: Check Python quality
         run: |
-          ruff check intel tests/test_public_intel.py tests/test_framework_integrations.py tests/run_gateway_conformance.py
-          ruff format --check intel tests/test_public_intel.py tests/test_framework_integrations.py tests/run_gateway_conformance.py
+          ruff check intel tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/run_gateway_conformance.py
+          ruff format --check intel tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/run_gateway_conformance.py
 
       - name: Check shell syntax
         run: |
@@ -36,6 +36,7 @@ jobs:
           bash -n packaging/sign-rpm-packages.sh
           bash -n packaging/smoke-install-live-repositories.sh
           bash -n packaging/smoke-install-repositories.sh
+          bash -n packaging/install-local.sh
           bash -n packaging/verify-package-contents.sh
           bash -n packaging/verify-repositories.sh
           bash -n scripts/notify-workflow-failure.sh
@@ -52,7 +53,7 @@ jobs:
         run: tests/run-agent-fixtures.sh
 
       - name: Run public AI threat-intel contracts
-        run: python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py -v
+        run: python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py -v
 
       - name: Run cross-language gateway conformance
         run: python3 -m tests.run_gateway_conformance

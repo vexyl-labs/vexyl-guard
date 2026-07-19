@@ -275,6 +275,7 @@ run_checks() {
   sh -n "$ROOT_DIR/packaging/install-report.sh"
   bash -n "$ROOT_DIR/packaging/sign-rpm-packages.sh"
   bash -n "$ROOT_DIR/packaging/smoke-install-repositories.sh"
+  bash -n "$ROOT_DIR/packaging/install-local.sh"
   bash -n "$ROOT_DIR/packaging/verify-package-contents.sh"
   bash -n "$ROOT_DIR/packaging/verify-repositories.sh"
   bash -n "$ROOT_DIR/scripts/notify-workflow-failure.sh"
@@ -289,6 +290,7 @@ run_checks() {
     python3 -m unittest \
       tests/test_public_intel.py \
       tests/test_framework_integrations.py \
+      tests/test_intel_updates.py \
       -v
     node tests/test_node_gateway_client.mjs
     node tests/test_node_framework_integrations.mjs

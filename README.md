@@ -26,6 +26,7 @@ Vexyl Guard provides one small, local scoring path for that activity:
 - **Monitor first:** installation does not immediately turn every finding into a firewall rule.
 - **Multiple log surfaces:** supported authentication, web, mail, firewall, VPN, database, object-storage, and edge/CDN logs.
 - **AI threat context:** prompt-probe classification, rapid mutation signal, and local defensive scoring contracts for prompts, external content, agent plans, and tool calls.
+- **Signed intelligence updates:** authenticated, signature-verified defensive records with monotonic versions, atomic activation, and last-known-good recovery.
 - **Operator-controlled response:** optional local blocking after policy review and configuration validation.
 - **Verifiable delivery:** public source, signed checksums, signed APT metadata, signed RPM packages, and recurring install canaries.
 - **Safer feedback:** redacted support reports omit raw logs and host-specific secrets.
@@ -240,6 +241,20 @@ Gateway setup and examples: [`docs/security/ai-gateway-integration.md`](docs/sec
 
 Framework and middleware examples: [`docs/security/framework-integrations.md`](docs/security/framework-integrations.md)
 
+### Signed Intelligence Updates
+
+Packages include an opt-in updater for Vexyl's defensive AI threat records. It accepts only authenticated HTTPS responses that also pass local RSA signature, revocation, expiry, sequence, record-hash, and defensive-shape checks. Updates replace intelligence tables atomically and preserve redacted runtime history.
+
+The updater is installed disabled and does not create a credential. After enrolling a host, provision `/etc/vexyl/intel-update.token` with mode `0600`, then enable the randomized six-hour timer:
+
+```bash
+sudo systemctl enable --now vexyl-intel-update.timer
+sudo systemctl start vexyl-intel-update.service
+sudo vexyl threat --db /var/lib/vexyl/ai_threats.sqlite intel-status
+```
+
+Trust model, token handling, manual verification, rollback, and recovery: [`docs/security/signed-intelligence-updates.md`](docs/security/signed-intelligence-updates.md)
+
 ## Tests
 
 ```bash
@@ -247,6 +262,7 @@ tests/run-agent-fixtures.sh
 python3 -m unittest tests/test_public_intel.py -v
 node tests/test_node_gateway_client.mjs
 python3 -m unittest tests/test_framework_integrations.py -v
+python3 -m unittest tests/test_intel_updates.py -v
 node tests/test_node_framework_integrations.mjs
 python3 -m tests.run_gateway_conformance
 ```

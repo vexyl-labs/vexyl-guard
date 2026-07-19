@@ -37,6 +37,8 @@ if [ -f "$ROOT_DIR/config/policy-signing-public.pem" ]; then
   install -m 0644 "$ROOT_DIR/config/policy-signing-public.pem" /etc/vexyl/policy-keys.d/vexyl-policy-dev-1.pem
 fi
 [ -f /etc/vexyl/revoked-policy-keys.txt ] || install -m 0644 /dev/null /etc/vexyl/revoked-policy-keys.txt
+[ -f /etc/vexyl/intel-update.conf ] || \
+  install -m 0640 "$ROOT_DIR/config/vexyl-intel-update.conf.example" /etc/vexyl/intel-update.conf
 
 if [ -f "$CONFIG_SOURCE" ]; then
   install -m 0640 "$CONFIG_SOURCE" /etc/vexyl/guard.conf
@@ -78,9 +80,14 @@ ensure_setting "VEXYL_AI_INTEL_SIGNAL_WEIGHT" "4"
 /usr/local/bin/vexyl threat --db /var/lib/vexyl/ai_threats.sqlite seed >/dev/null
 
 install -m 0644 "$ROOT_DIR/packaging/vexyl-guard.service" /etc/systemd/system/vexyl-guard.service
+install -m 0644 "$ROOT_DIR/packaging/vexyl-intel-update.service" \
+  /etc/systemd/system/vexyl-intel-update.service
+install -m 0644 "$ROOT_DIR/packaging/vexyl-intel-update.timer" \
+  /etc/systemd/system/vexyl-intel-update.timer
 systemctl daemon-reload
 systemctl enable vexyl-guard
 
 printf 'Installed Vexyl Guard. Start with: systemctl start vexyl-guard\n'
 printf 'Current mode is set in /etc/vexyl/guard.conf. Use monitor first, then enforce.\n'
 printf 'AI threat intelligence seeded at /var/lib/vexyl/ai_threats.sqlite. Search with: vexyl threat search prompt\n'
+printf 'Signed intelligence updates are installed but disabled. See docs/security/signed-intelligence-updates.md.\n'

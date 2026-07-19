@@ -17,15 +17,29 @@ from .scoring import (
     score_ai_event,
     score_and_record_ai_event,
 )
+from .updates import (
+    IntelUpdateError,
+    apply_intel_bundle,
+    intel_update_status,
+    recover_intel_database,
+    rollback_intel_bundle,
+    sync_intel_bundle,
+    verify_intel_bundle,
+)
 
 __all__ = [
     "RuntimeAIEvent",
     "RiskDecision",
+    "IntelUpdateError",
+    "apply_intel_bundle",
     "default_db_path",
     "evaluate_agent_plan",
     "evaluate_tool_call",
     "init_db",
+    "intel_update_status",
     "purge_runtime_history",
+    "recover_intel_database",
+    "rollback_intel_bundle",
     "runtime_history_status",
     "scan_external_content",
     "scan_prompt",
@@ -33,4 +47,6 @@ __all__ = [
     "score_and_record_ai_event",
     "search_threats",
     "seed_db",
+    "sync_intel_bundle",
+    "verify_intel_bundle",
 ]

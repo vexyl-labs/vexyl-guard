@@ -76,6 +76,8 @@ stage_tree() {
   cli_path="$3"
   service_path="$4"
   gateway_service_path="$(dirname "$service_path")/vexyl-ai-gateway.service"
+  intel_update_service_path="$(dirname "$service_path")/vexyl-intel-update.service"
+  intel_update_timer_path="$(dirname "$service_path")/vexyl-intel-update.timer"
 
   install -d -m 0755 "$dest/usr/share/doc/vexyl-guard"
   install -d -m 0755 "$dest/usr/lib/vexyl"
@@ -96,6 +98,7 @@ stage_tree() {
 
   install -m 0640 "$ROOT_DIR/config/vexyl-guard.conf.example" "$dest/etc/vexyl/guard.conf"
   install -m 0640 "$ROOT_DIR/config/vexyl-ai-gateway.conf.example" "$dest/etc/vexyl/ai-gateway.conf"
+  install -m 0640 "$ROOT_DIR/config/vexyl-intel-update.conf.example" "$dest/etc/vexyl/intel-update.conf"
   sed -i "s#^VEXYL_AGENT_BIN=.*#VEXYL_AGENT_BIN=/$agent_path#" "$dest/etc/vexyl/guard.conf"
   if [ -f "$ROOT_DIR/config/release-signing-public.pem" ]; then
     install -m 0644 "$ROOT_DIR/config/release-signing-public.pem" "$dest/etc/vexyl/release-signing-public.pem"
@@ -118,6 +121,13 @@ stage_tree() {
     "$ROOT_DIR/packaging/vexyl-ai-gateway.service" >"$dest/$gateway_service_path"
   chmod 0644 "$dest/$gateway_service_path"
 
+  sed \
+    -e "s#^ExecStart=.*#ExecStart=/$cli_path threat --db \${VEXYL_INTEL_DB} sync-intel#" \
+    "$ROOT_DIR/packaging/vexyl-intel-update.service" >"$dest/$intel_update_service_path"
+  chmod 0644 "$dest/$intel_update_service_path"
+  install -m 0644 "$ROOT_DIR/packaging/vexyl-intel-update.timer" \
+    "$dest/$intel_update_timer_path"
+
   install -m 0644 "$ROOT_DIR/LICENSE" "$dest/usr/share/doc/vexyl-guard/LICENSE"
   install -m 0644 "$ROOT_DIR/NOTICE" "$dest/usr/share/doc/vexyl-guard/NOTICE"
   install -m 0644 "$ROOT_DIR/README.md" "$dest/usr/share/doc/vexyl-guard/README.md"
@@ -127,6 +137,8 @@ stage_tree() {
     "$dest/usr/share/doc/vexyl-guard/runtime-ai-defense.md"
   install -m 0644 "$ROOT_DIR/docs/security/framework-integrations.md" \
     "$dest/usr/share/doc/vexyl-guard/framework-integrations.md"
+  install -m 0644 "$ROOT_DIR/docs/security/signed-intelligence-updates.md" \
+    "$dest/usr/share/doc/vexyl-guard/signed-intelligence-updates.md"
 }
 
 write_postinst() {
@@ -210,6 +222,9 @@ write_prerm() {
 set -e
 
 if [ "$1" = "remove" ] && command -v systemctl >/dev/null 2>&1; then
+  systemctl stop vexyl-intel-update.timer >/dev/null 2>&1 || true
+  systemctl disable vexyl-intel-update.timer >/dev/null 2>&1 || true
+  systemctl stop vexyl-intel-update.service >/dev/null 2>&1 || true
   systemctl stop vexyl-ai-gateway >/dev/null 2>&1 || true
   systemctl disable vexyl-ai-gateway >/dev/null 2>&1 || true
   systemctl stop vexyl-guard >/dev/null 2>&1 || true
@@ -268,6 +283,7 @@ EOF
   cat >"$root/DEBIAN/conffiles" <<'EOF'
 /etc/vexyl/guard.conf
 /etc/vexyl/ai-gateway.conf
+/etc/vexyl/intel-update.conf
 /etc/vexyl/revoked-policy-keys.txt
 EOF
   write_postinst "$root/DEBIAN/postinst"
@@ -396,6 +412,9 @@ fi
 
 %preun
 if [ "\$1" = "0" ] && command -v systemctl >/dev/null 2>&1; then
+  systemctl stop vexyl-intel-update.timer >/dev/null 2>&1 || true
+  systemctl disable vexyl-intel-update.timer >/dev/null 2>&1 || true
+  systemctl stop vexyl-intel-update.service >/dev/null 2>&1 || true
   systemctl stop vexyl-ai-gateway >/dev/null 2>&1 || true
   systemctl disable vexyl-ai-gateway >/dev/null 2>&1 || true
   systemctl stop vexyl-guard >/dev/null 2>&1 || true
@@ -414,8 +433,10 @@ fi
 %doc /usr/share/doc/vexyl-guard/ai-gateway-integration.md
 %doc /usr/share/doc/vexyl-guard/runtime-ai-defense.md
 %doc /usr/share/doc/vexyl-guard/framework-integrations.md
+%doc /usr/share/doc/vexyl-guard/signed-intelligence-updates.md
 %config(noreplace) /etc/vexyl/guard.conf
 %config(noreplace) /etc/vexyl/ai-gateway.conf
+%config(noreplace) /etc/vexyl/intel-update.conf
 %config(noreplace) /etc/vexyl/revoked-policy-keys.txt
 /etc/vexyl/release-signing-public.pem
 /etc/vexyl/policy-signing-public.pem
@@ -434,6 +455,8 @@ fi
 /usr/sbin/vexyl-guard
 /usr/lib/systemd/system/vexyl-guard.service
 /usr/lib/systemd/system/vexyl-ai-gateway.service
+/usr/lib/systemd/system/vexyl-intel-update.service
+/usr/lib/systemd/system/vexyl-intel-update.timer
 %dir /var/lib/vexyl
 EOF
 

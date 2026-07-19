@@ -61,6 +61,8 @@ Initialize the local database once:
 sudo vexyl threat --db /var/lib/vexyl/ai_threats.sqlite seed
 ```
 
+Bundled records provide an offline baseline. An active signed dataset is never overwritten by a later seed or gateway restart. Operators can opt into authenticated, signature-verified record refreshes using the packaged updater described in [`signed-intelligence-updates.md`](signed-intelligence-updates.md).
+
 Score an event and retain only its redacted, derived facts:
 
 ```bash

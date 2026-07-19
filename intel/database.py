@@ -638,6 +638,7 @@ def init_db(db_path: str | Path | None = None) -> Path:
         conn.execute("PRAGMA secure_delete = ON")
         conn.executescript(load_schema_sql())
         migrate_runtime_event_schema(conn)
+        migrate_intel_bundle_state_schema(conn)
     return path
 
 
@@ -691,12 +692,66 @@ def migrate_runtime_event_schema(conn: sqlite3.Connection) -> None:
     )
 
 
+def migrate_intel_bundle_state_schema(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS intel_bundle_state (
+          state_id INTEGER PRIMARY KEY CHECK (state_id = 1),
+          active_sequence INTEGER NOT NULL DEFAULT 0 CHECK (active_sequence >= 0),
+          active_bundle_id TEXT,
+          active_issued_at_utc TEXT,
+          active_expires_at_utc TEXT,
+          active_records_sha256 TEXT,
+          active_payload_sha256 TEXT,
+          active_key_id TEXT,
+          active_record_count INTEGER NOT NULL DEFAULT 0 CHECK (active_record_count >= 0),
+          activated_at_utc TEXT,
+          highest_sequence INTEGER NOT NULL DEFAULT 0 CHECK (highest_sequence >= 0),
+          highest_records_sha256 TEXT,
+          rollback_from_sequence INTEGER,
+          updated_at_utc TEXT NOT NULL
+        )"""
+    )
+
+
 def seed_db(
     db_path: str | Path | None = None, seed_path: str | Path | None = None
 ) -> dict[str, int]:
     path = init_db(db_path)
-    seed_records = load_seed_records(seed_path)
     with connect(path) as conn:
+        state = conn.execute(
+            "SELECT active_sequence FROM intel_bundle_state WHERE state_id = 1"
+        ).fetchone()
+        if state and int(state["active_sequence"] or 0) > 0:
+            counts = _database_record_counts(conn)
+            counts["signed_bundle_preserved"] = 1
+            return counts
+
+    seed_records = load_seed_records(seed_path)
+    return seed_records_into_db(path, seed_records, preserve_signed_bundle=True)
+
+
+def seed_records_into_db(
+    db_path: str | Path | None,
+    seed_records: Iterable[dict[str, Any]],
+    *,
+    preserve_signed_bundle: bool = False,
+) -> dict[str, int]:
+    records = [dict(record) for record in seed_records]
+    for line_number, record in enumerate(records, start=1):
+        validate_seed_record(record, line_number)
+
+    path = init_db(db_path)
+    with connect(path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if preserve_signed_bundle:
+            state = conn.execute(
+                "SELECT active_sequence FROM intel_bundle_state WHERE state_id = 1"
+            ).fetchone()
+            if state and int(state["active_sequence"] or 0) > 0:
+                counts = _database_record_counts(conn)
+                counts["signed_bundle_preserved"] = 1
+                return counts
+
         insert_sources(conn, SOURCE_ROWS)
         insert_frameworks(conn, FRAMEWORK_ROWS)
         attack_count = 0
@@ -707,7 +762,7 @@ def seed_db(
         observation_count = 0
         watch_count = 0
 
-        for record in seed_records:
+        for record in records:
             attack = attack_from_seed(record)
             insert_attack_pattern(conn, attack)
             attack_count += 1
@@ -730,6 +785,32 @@ def seed_db(
         "mappings": mapping_count,
         "observations": observation_count,
         "watch_items": watch_count,
+    }
+
+
+def _database_record_counts(conn: sqlite3.Connection) -> dict[str, int]:
+    return {
+        "attacks": int(
+            conn.execute("SELECT COUNT(*) FROM attack_patterns").fetchone()[0]
+        ),
+        "indicators": int(
+            conn.execute("SELECT COUNT(*) FROM indicators").fetchone()[0]
+        ),
+        "rules": int(
+            conn.execute("SELECT COUNT(*) FROM detection_rules").fetchone()[0]
+        ),
+        "mitigations": int(
+            conn.execute("SELECT COUNT(*) FROM mitigations").fetchone()[0]
+        ),
+        "mappings": int(
+            conn.execute("SELECT COUNT(*) FROM technique_mappings").fetchone()[0]
+        ),
+        "observations": int(
+            conn.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
+        ),
+        "watch_items": int(
+            conn.execute("SELECT COUNT(*) FROM watch_items").fetchone()[0]
+        ),
     }
 
 

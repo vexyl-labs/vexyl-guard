@@ -21,6 +21,11 @@ from .database import runtime_history_status, seed_db
 from .integration import DECISION_SCHEMA, EVENT_SCHEMA, GatewayEventError
 from .integration import validate_gateway_event
 from .scoring import score_and_record_ai_event
+from .updates import (
+    IntelUpdateError,
+    intel_update_status,
+    recover_intel_database_if_needed,
+)
 
 DEFAULT_DB_PATH = "/var/lib/vexyl/ai_threats.sqlite"
 DEFAULT_SOCKET_PATH = "/run/vexyl/ai-gateway.sock"
@@ -106,7 +111,15 @@ class VexylGatewayRequestHandler(BaseHTTPRequestHandler):
             return
         if self.path == "/v1/runtime-status":
             status = runtime_history_status(self._configuration.db_path)
-            self._send_json(200, {"ok": True, "runtime_history": status})
+            intelligence = intel_update_status(self._configuration.db_path)
+            self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "runtime_history": status,
+                    "intelligence": intelligence,
+                },
+            )
             return
         self._error(404, "not_found", "endpoint not found")
 
@@ -274,6 +287,12 @@ def create_gateway_server(
     if socket_mode & 0o007:
         raise GatewayConfigurationError("gateway socket cannot grant access to others")
     Path(socket_path).parent.mkdir(mode=0o750, parents=True, exist_ok=True)
+    try:
+        recover_intel_database_if_needed(db_path)
+    except IntelUpdateError as exc:
+        raise GatewayConfigurationError(
+            "gateway intelligence database recovery failed"
+        ) from exc
     seed_db(db_path)
     return VexylGatewayServer(
         GatewayConfiguration(

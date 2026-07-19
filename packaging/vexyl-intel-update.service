@@ -1,0 +1,35 @@
+[Unit]
+Description=Vexyl Guard signed defensive intelligence update
+Documentation=https://vexyl.dev/ai-threat-security/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/vexyl/intel-update.conf
+ExecStartPre=/usr/bin/test -r /etc/vexyl/intel-update.token
+ExecStart=/usr/bin/vexyl threat --db ${VEXYL_INTEL_DB} sync-intel
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadOnlyPaths=/etc/vexyl
+ReadWritePaths=/var/lib/vexyl
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

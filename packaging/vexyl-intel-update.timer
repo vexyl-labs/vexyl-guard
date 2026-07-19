@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically refresh Vexyl Guard signed defensive intelligence
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+RandomizedDelaySec=30min
+Persistent=true
+Unit=vexyl-intel-update.service
+
+[Install]
+WantedBy=timers.target
