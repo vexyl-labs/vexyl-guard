@@ -159,7 +159,7 @@ sudo env VEXYL_INSTALL_REPORT=off apt install vexyl-guard
 sudo env VEXYL_INSTALL_REPORT=off dnf install vexyl-guard
 ```
 
-Maintainers can configure `VEXYL_PLATFORM_PROMOTION_TOKEN` so the release workflow dispatches the private platform promotion after signed assets are published.
+Maintainers must configure `VEXYL_PLATFORM_PROMOTION_TOKEN` in the public repository so the release workflow can dispatch and verify the private platform promotion after signed assets are published. Use a fine-grained token scoped only to the `vexyl-platform` repository and its Actions workflows. A missing token fails the release instead of silently leaving `vexyl.dev/repo` behind GitHub.
 
 ## Release Readiness
 

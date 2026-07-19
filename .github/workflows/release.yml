@@ -241,8 +241,8 @@ jobs:
           GH_TOKEN: ${{ secrets.VEXYL_PLATFORM_PROMOTION_TOKEN }}
         run: |
           if [ -z "${GH_TOKEN:-}" ]; then
-            printf 'Skipping platform promotion: VEXYL_PLATFORM_PROMOTION_TOKEN is not configured.\n'
-            exit 0
+            printf 'VEXYL_PLATFORM_PROMOTION_TOKEN is required for verified repository promotion.\n' >&2
+            exit 1
           fi
 
           target_repo="vexyl-labs/vexyl-platform"
