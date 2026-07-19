@@ -1,0 +1,68 @@
+name: Verify Platform Promotion Access
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require cross-repository token
+        env:
+          GH_TOKEN: ${{ secrets.VEXYL_PLATFORM_PROMOTION_TOKEN }}
+        run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            printf 'VEXYL_PLATFORM_PROMOTION_TOKEN is not configured.\n' >&2
+            exit 1
+          fi
+
+          gh api \
+            repos/vexyl-labs/vexyl-platform/actions/workflows/promote-release-repo.yml \
+            --jq '.state' \
+            | grep -qx active
+
+      - name: Dispatch no-change promotion verification
+        env:
+          GH_TOKEN: ${{ secrets.VEXYL_PLATFORM_PROMOTION_TOKEN }}
+        run: |
+          target_repo="vexyl-labs/vexyl-platform"
+          workflow="promote-release-repo.yml"
+          before="$(
+            gh run list \
+              --repo "$target_repo" \
+              --workflow "$workflow" \
+              --json databaseId \
+              --limit 1 \
+              --jq '.[0].databaseId // 0'
+          )"
+
+          gh workflow run "$workflow" \
+            --repo "$target_repo" \
+            -f tag=latest \
+            -f source_repo=vexyl-labs/vexyl-guard \
+            -f force_deploy=false
+
+          verification_run=""
+          for _ in $(seq 1 40); do
+            verification_run="$(
+              gh run list \
+                --repo "$target_repo" \
+                --workflow "$workflow" \
+                --event workflow_dispatch \
+                --json databaseId \
+                --limit 20 \
+                --jq "[.[] | select(.databaseId > $before)] | sort_by(.databaseId) | last | .databaseId // empty"
+            )"
+            [ -n "$verification_run" ] && break
+            sleep 3
+          done
+
+          [ -n "$verification_run" ] || {
+            printf 'Promotion access verification did not produce a workflow run.\n' >&2
+            exit 1
+          }
+
+          gh run watch "$verification_run" --repo "$target_repo" --exit-status

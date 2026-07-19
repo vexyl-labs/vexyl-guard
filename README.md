@@ -49,7 +49,7 @@ Vexyl Guard complements patching, access control, backups, firewall policy, and 
 
 - [`agent/vexyl-guard.sh`](agent/vexyl-guard.sh): Bash host agent for Linux servers.
 - [`intel/`](intel): public runtime interfaces and redaction helpers for local defensive scoring. Active intelligence records remain private.
-- [`integrations/`](integrations): dependency-free application clients for the authenticated local AI decision gateway.
+- [`integrations/`](integrations): dependency-free Node.js clients and framework guards for the authenticated local AI decision gateway.
 - [`vexyl`](vexyl): Python CLI entry point for local threat-intelligence commands.
 - [`config/vexyl-guard.conf.example`](config/vexyl-guard.conf.example): monitor-first agent configuration.
 - [`packaging/`](packaging): Debian/RPM builds, signed repository tooling, and systemd service.
@@ -234,9 +234,11 @@ sudo systemctl enable --now vexyl-ai-gateway
 sudo vexyl gateway health
 ```
 
-The gateway rejects raw prompt, message, tool-argument, output, and arbitrary context fields. Python adapters and a dependency-free Node.js client cover RAG, memory, agents, MCP tools, model gateways, and AI supply-chain boundaries. Sensitive actions should fail closed when the gateway is unavailable.
+The gateway rejects raw prompt, message, tool-argument, output, and arbitrary context fields. Python adapters and dependency-free Node.js clients cover RAG, memory, agents, MCP tools, model gateways, and AI supply-chain boundaries. ASGI/FastAPI and Express guards expose a request-scoped decision boundary without reading application request bodies. Sensitive actions fail closed when the gateway is unavailable.
 
 Gateway setup and examples: [`docs/security/ai-gateway-integration.md`](docs/security/ai-gateway-integration.md)
+
+Framework and middleware examples: [`docs/security/framework-integrations.md`](docs/security/framework-integrations.md)
 
 ## Tests
 
@@ -244,6 +246,9 @@ Gateway setup and examples: [`docs/security/ai-gateway-integration.md`](docs/sec
 tests/run-agent-fixtures.sh
 python3 -m unittest tests/test_public_intel.py -v
 node tests/test_node_gateway_client.mjs
+python3 -m unittest tests/test_framework_integrations.py -v
+node tests/test_node_framework_integrations.mjs
+python3 -m tests.run_gateway_conformance
 ```
 
 The GitHub Actions workflow runs the same safe fixture and public AI threat-intelligence contract checks.

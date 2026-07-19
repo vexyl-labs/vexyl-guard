@@ -135,6 +135,7 @@ EOF
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /usr/lib/systemd/system/vexyl-ai-gateway.service
     test -f /usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
+    test -f /usr/share/vexyl/integrations/node/vexyl-guard-middleware.mjs
     test -f /etc/vexyl/guard.conf
     test -f /etc/vexyl/ai-gateway.conf
     test "$(stat -c %a /etc/vexyl)" = 750
@@ -212,6 +213,7 @@ EOF
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /usr/lib/systemd/system/vexyl-ai-gateway.service
     test -f /usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
+    test -f /usr/share/vexyl/integrations/node/vexyl-guard-middleware.mjs
     test -f /etc/vexyl/guard.conf
     test -f /etc/vexyl/ai-gateway.conf
     test "$(stat -c %a /etc/vexyl)" = 750

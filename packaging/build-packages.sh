@@ -91,8 +91,8 @@ stage_tree() {
   install -m 0755 "$ROOT_DIR/vexyl" "$dest/$cli_path"
   install -m 0755 "$ROOT_DIR/packaging/install-report.sh" "$dest/usr/lib/vexyl/install-report.sh"
   install -m 0644 "$ROOT_DIR"/intel/*.py "$dest/opt/vexyl/intel/"
-  install -m 0644 "$ROOT_DIR/integrations/node/vexyl-guard-client.mjs" \
-    "$dest/usr/share/vexyl/integrations/node/vexyl-guard-client.mjs"
+  install -m 0644 "$ROOT_DIR"/integrations/node/*.mjs \
+    "$dest/usr/share/vexyl/integrations/node/"
 
   install -m 0640 "$ROOT_DIR/config/vexyl-guard.conf.example" "$dest/etc/vexyl/guard.conf"
   install -m 0640 "$ROOT_DIR/config/vexyl-ai-gateway.conf.example" "$dest/etc/vexyl/ai-gateway.conf"
@@ -125,6 +125,8 @@ stage_tree() {
     "$dest/usr/share/doc/vexyl-guard/ai-gateway-integration.md"
   install -m 0644 "$ROOT_DIR/docs/security/runtime-ai-defense.md" \
     "$dest/usr/share/doc/vexyl-guard/runtime-ai-defense.md"
+  install -m 0644 "$ROOT_DIR/docs/security/framework-integrations.md" \
+    "$dest/usr/share/doc/vexyl-guard/framework-integrations.md"
 }
 
 write_postinst() {
@@ -411,6 +413,7 @@ fi
 %doc /usr/share/doc/vexyl-guard/README.md
 %doc /usr/share/doc/vexyl-guard/ai-gateway-integration.md
 %doc /usr/share/doc/vexyl-guard/runtime-ai-defense.md
+%doc /usr/share/doc/vexyl-guard/framework-integrations.md
 %config(noreplace) /etc/vexyl/guard.conf
 %config(noreplace) /etc/vexyl/ai-gateway.conf
 %config(noreplace) /etc/vexyl/revoked-policy-keys.txt
@@ -423,6 +426,7 @@ fi
 %dir /usr/share/vexyl/integrations
 %dir /usr/share/vexyl/integrations/node
 /usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
+/usr/share/vexyl/integrations/node/vexyl-guard-middleware.mjs
 %dir /opt/vexyl
 %dir /opt/vexyl/intel
 /opt/vexyl/intel/*.py

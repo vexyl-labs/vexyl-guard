@@ -24,8 +24,8 @@ jobs:
 
       - name: Check Python quality
         run: |
-          ruff check intel tests/test_public_intel.py
-          ruff format --check intel tests/test_public_intel.py
+          ruff check intel tests/test_public_intel.py tests/test_framework_integrations.py tests/run_gateway_conformance.py
+          ruff format --check intel tests/test_public_intel.py tests/test_framework_integrations.py tests/run_gateway_conformance.py
 
       - name: Check shell syntax
         run: |
@@ -44,13 +44,18 @@ jobs:
       - name: Check Node.js integration client syntax
         run: |
           node --check integrations/node/vexyl-guard-client.mjs
+          node --check integrations/node/vexyl-guard-middleware.mjs
           node tests/test_node_gateway_client.mjs
+          node tests/test_node_framework_integrations.mjs
 
       - name: Run agent fixtures
         run: tests/run-agent-fixtures.sh
 
       - name: Run public AI threat-intel contracts
-        run: python3 -m unittest tests/test_public_intel.py -v
+        run: python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py -v
+
+      - name: Run cross-language gateway conformance
+        run: python3 -m tests.run_gateway_conformance
 
       - name: Build packages
         run: packaging/build-packages.sh --format all

@@ -41,7 +41,9 @@ for package in "$@"; do
     "/opt/vexyl/intel/database.py" \
     "/opt/vexyl/intel/gateway.py" \
     "/opt/vexyl/intel/integration.py" \
+    "/opt/vexyl/intel/middleware.py" \
     "/usr/share/vexyl/integrations/node/vexyl-guard-client.mjs" \
+    "/usr/share/vexyl/integrations/node/vexyl-guard-middleware.mjs" \
     "/etc/vexyl/guard.conf" \
     "/etc/vexyl/ai-gateway.conf" \
     "/usr/lib/systemd/system/vexyl-ai-gateway.service" \

@@ -259,6 +259,7 @@ run_checks() {
     dpkg-scanpackages \
     gpg \
     gzip \
+    node \
     python3 \
     rg \
     rpm \
@@ -281,6 +282,18 @@ run_checks() {
 
   log "running agent fixtures"
   "$ROOT_DIR/tests/run-agent-fixtures.sh"
+
+  log "running framework integration contracts"
+  (
+    cd "$ROOT_DIR"
+    python3 -m unittest \
+      tests/test_public_intel.py \
+      tests/test_framework_integrations.py \
+      -v
+    node tests/test_node_gateway_client.mjs
+    node tests/test_node_framework_integrations.mjs
+    python3 -m tests.run_gateway_conformance
+  )
 
   log "building preview packages"
   rm -rf "$ROOT_DIR/dist/packages" "$ROOT_DIR/dist/repositories"
