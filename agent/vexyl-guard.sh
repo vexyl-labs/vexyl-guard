@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-VERSION="0.2.12"
+VERSION="0.2.13"
 CONFIG_FILE="${VEXYL_CONFIG_FILE:-/etc/vexyl/guard.conf}"
 
 VEXYL_MODE="${VEXYL_MODE:-monitor}"
