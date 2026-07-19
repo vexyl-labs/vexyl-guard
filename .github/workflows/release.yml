@@ -236,7 +236,7 @@ jobs:
             gh release create "$tag" dist/packages/* --title "Vexyl Guard $tag" --notes-file RELEASE_NOTES.md --latest
           fi
 
-      - name: Trigger platform repository promotion
+      - name: Trigger and verify platform repository promotion
         env:
           GH_TOKEN: ${{ secrets.VEXYL_PLATFORM_PROMOTION_TOKEN }}
         run: |
@@ -245,13 +245,44 @@ jobs:
             exit 0
           fi
 
-          gh api \
-            --method POST \
-            repos/vexyl-labs/vexyl-platform/dispatches \
-            -f event_type=vexyl-guard-release \
-            -f client_payload[tag]="${{ steps.meta.outputs.tag }}" \
-            -f client_payload[source_repo]="${{ github.repository }}" \
-            -f client_payload[release_run_id]="${{ github.run_id }}"
+          target_repo="vexyl-labs/vexyl-platform"
+          workflow="promote-release-repo.yml"
+          before="$(
+            gh run list \
+              --repo "$target_repo" \
+              --workflow "$workflow" \
+              --json databaseId \
+              --limit 1 \
+              --jq '.[0].databaseId // 0'
+          )"
+
+          gh workflow run "$workflow" \
+            --repo "$target_repo" \
+            -f tag="${{ steps.meta.outputs.tag }}" \
+            -f source_repo="${{ github.repository }}" \
+            -f force_deploy=true
+
+          promotion_run=""
+          for _ in $(seq 1 40); do
+            promotion_run="$(
+              gh run list \
+                --repo "$target_repo" \
+                --workflow "$workflow" \
+                --event workflow_dispatch \
+                --json databaseId \
+                --limit 20 \
+                --jq "[.[] | select(.databaseId > $before)] | sort_by(.databaseId) | last | .databaseId // empty"
+            )"
+            [ -n "$promotion_run" ] && break
+            sleep 3
+          done
+
+          [ -n "$promotion_run" ] || {
+            printf 'Platform promotion dispatch did not produce a workflow run.\n' >&2
+            exit 1
+          }
+
+          gh run watch "$promotion_run" --repo "$target_repo" --exit-status
 
       - name: Email failure alert
         if: failure()
