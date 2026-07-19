@@ -263,11 +263,13 @@ jobs:
               --jq '.[0].databaseId // 0'
           )"
 
-          gh workflow run "$workflow" \
-            --repo "$target_repo" \
-            -f tag="${{ steps.meta.outputs.tag }}" \
-            -f source_repo="${{ github.repository }}" \
-            -f force_deploy=true
+          gh api \
+            --method POST \
+            "repos/$target_repo/actions/workflows/$workflow/dispatches" \
+            -f ref=main \
+            -f "inputs[tag]=${{ steps.meta.outputs.tag }}" \
+            -f "inputs[source_repo]=${{ github.repository }}" \
+            -F "inputs[force_deploy]=true"
 
           promotion_run=""
           for _ in $(seq 1 40); do

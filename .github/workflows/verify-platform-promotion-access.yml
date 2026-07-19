@@ -39,11 +39,13 @@ jobs:
               --jq '.[0].databaseId // 0'
           )"
 
-          gh workflow run "$workflow" \
-            --repo "$target_repo" \
-            -f tag=latest \
-            -f source_repo=vexyl-labs/vexyl-guard \
-            -f force_deploy=false
+          gh api \
+            --method POST \
+            "repos/$target_repo/actions/workflows/$workflow/dispatches" \
+            -f ref=main \
+            -f "inputs[tag]=latest" \
+            -f "inputs[source_repo]=vexyl-labs/vexyl-guard" \
+            -F "inputs[force_deploy]=false"
 
           verification_run=""
           for _ in $(seq 1 40); do
