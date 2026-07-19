@@ -7,7 +7,12 @@ from uuid import uuid4
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _string_list(value: Any) -> list[str]:
@@ -178,7 +183,9 @@ class RuntimeAIEvent:
     def from_dict(cls, data: dict[str, Any]) -> "RuntimeAIEvent":
         return cls(
             event_id=str(data.get("event_id") or uuid4()),
-            timestamp_utc=str(data.get("timestamp_utc") or data.get("event_time_utc") or utc_now_iso()),
+            timestamp_utc=str(
+                data.get("timestamp_utc") or data.get("event_time_utc") or utc_now_iso()
+            ),
             tenant_id=data.get("tenant_id"),
             user_id_hash=data.get("user_id_hash"),
             session_id_hash=data.get("session_id_hash"),
@@ -186,7 +193,9 @@ class RuntimeAIEvent:
             model_name=data.get("model_name"),
             input_channel=str(data.get("input_channel") or "other"),
             data_origin=str(data.get("data_origin") or "unknown"),
-            text_excerpt_redacted=data.get("text_excerpt_redacted") or data.get("text") or data.get("prompt"),
+            text_excerpt_redacted=data.get("text_excerpt_redacted")
+            or data.get("text")
+            or data.get("prompt"),
             full_text_ref=data.get("full_text_ref"),
             retrieved_doc_ids=_string_list(data.get("retrieved_doc_ids")),
             tool_name=data.get("tool_name"),
@@ -197,8 +206,12 @@ class RuntimeAIEvent:
             network_destination=data.get("network_destination"),
             cost_estimate=_float_value(data.get("cost_estimate")),
             token_count_estimate=_int_value(data.get("token_count_estimate")),
-            verified_mitigations=_string_list(data.get("verified_mitigations") or data.get("mitigations")),
-            context=data.get("context") if isinstance(data.get("context"), dict) else {},
+            verified_mitigations=_string_list(
+                data.get("verified_mitigations") or data.get("mitigations")
+            ),
+            context=data.get("context")
+            if isinstance(data.get("context"), dict)
+            else {},
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -217,6 +230,9 @@ class RiskDecision:
     trust_level: str = "unknown"
     redacted_excerpt: str | None = None
     deny_tool_call: bool = False
+    correlation_scope: str | None = None
+    correlation_window_seconds: int = 0
+    correlated_event_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

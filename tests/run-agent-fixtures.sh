@@ -260,6 +260,7 @@ VEXYL_POLICY_PUBLIC_KEY_DIR=$TMP_DIR/missing-policy-keys
 VEXYL_POLICY_PUBLIC_KEY_FILE=$TMP_DIR/missing-policy.pem
 VEXYL_POLICY_BUNDLE_ENABLED=true
 VEXYL_AI_INTEL_ENABLED=false
+VEXYL_AI_HISTORY_RETENTION_HOURS=0
 EOF
 chmod 0600 "$INVALID_CONFIG"
 
@@ -275,6 +276,7 @@ if [ "$INVALID_CONFIG_STATUS" -ne 78 ]; then
 fi
 for expected in \
   'VEXYL_THRESHOLD must be an integer' \
+  'VEXYL_AI_HISTORY_RETENTION_HOURS must be between 1 and 720' \
   'covers an entire address family' \
   'is not a valid IP address' \
   'Enforcement requires nftables or iptables' \

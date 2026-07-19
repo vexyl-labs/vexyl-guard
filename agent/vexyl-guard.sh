@@ -48,6 +48,7 @@ VEXYL_AI_INTEL_DB="${VEXYL_AI_INTEL_DB:-}"
 VEXYL_AI_INTEL_AUTO_SEED="${VEXYL_AI_INTEL_AUTO_SEED:-false}"
 VEXYL_AI_INTEL_SIGNAL_SCORE="${VEXYL_AI_INTEL_SIGNAL_SCORE:-70}"
 VEXYL_AI_INTEL_SIGNAL_WEIGHT="${VEXYL_AI_INTEL_SIGNAL_WEIGHT:-4}"
+VEXYL_AI_HISTORY_RETENTION_HOURS="${VEXYL_AI_HISTORY_RETENTION_HOURS:-24}"
 
 SCORES_FILE=""
 BLOCKS_FILE=""
@@ -105,6 +106,7 @@ load_config() {
   VEXYL_AI_INTEL_DB="${VEXYL_AI_INTEL_DB:-$VEXYL_STATE_DIR/ai_threats.sqlite}"
   case "$VEXYL_AI_INTEL_SIGNAL_SCORE" in ''|*[!0-9]*) VEXYL_AI_INTEL_SIGNAL_SCORE=70 ;; esac
   case "$VEXYL_AI_INTEL_SIGNAL_WEIGHT" in ''|*[!0-9]*) VEXYL_AI_INTEL_SIGNAL_WEIGHT=4 ;; esac
+  case "$VEXYL_AI_HISTORY_RETENTION_HOURS" in ''|*[!0-9]*) VEXYL_AI_HISTORY_RETENTION_HOURS=24 ;; esac
   case "$VEXYL_HEARTBEAT_SECONDS" in ''|*[!0-9]*) VEXYL_HEARTBEAT_SECONDS=300 ;; esac
   [ "$VEXYL_HEARTBEAT_SECONDS" -ge 60 ] 2>/dev/null || VEXYL_HEARTBEAT_SECONDS=60
 
@@ -435,7 +437,8 @@ score_ai_web_event() {
       return 1
     }
 
-  output="$("$VEXYL_AI_INTEL_BIN" threat --db "$VEXYL_AI_INTEL_DB" score-event --record "$event_file" 2>/dev/null)" || {
+  output="$(VEXYL_AI_HISTORY_RETENTION_HOURS="$VEXYL_AI_HISTORY_RETENTION_HOURS" \
+    "$VEXYL_AI_INTEL_BIN" threat --db "$VEXYL_AI_INTEL_DB" score-event --record "$event_file" 2>/dev/null)" || {
     rm -f "$event_file"
     return 1
   }
@@ -2360,6 +2363,7 @@ validate_config() {
   validate_integer_setting VEXYL_MUTATION_WEIGHT "$VEXYL_MUTATION_WEIGHT" 1 1000000
   validate_integer_setting VEXYL_AI_INTEL_SIGNAL_SCORE "$VEXYL_AI_INTEL_SIGNAL_SCORE" 0 100
   validate_integer_setting VEXYL_AI_INTEL_SIGNAL_WEIGHT "$VEXYL_AI_INTEL_SIGNAL_WEIGHT" 1 1000000
+  validate_integer_setting VEXYL_AI_HISTORY_RETENTION_HOURS "$VEXYL_AI_HISTORY_RETENTION_HOURS" 1 720
 
   validate_allowlist
   validate_firewall_config
@@ -2668,6 +2672,7 @@ VEXYL_AI_INTEL_DB=/var/lib/vexyl/ai_threats.sqlite
 VEXYL_AI_INTEL_AUTO_SEED=false
 VEXYL_AI_INTEL_SIGNAL_SCORE=70
 VEXYL_AI_INTEL_SIGNAL_WEIGHT=4
+VEXYL_AI_HISTORY_RETENTION_HOURS=24
 EOF
     chmod 0640 "$CONFIG_FILE"
   fi

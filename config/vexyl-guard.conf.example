@@ -79,3 +79,5 @@ VEXYL_AI_INTEL_DB=/var/lib/vexyl/ai_threats.sqlite
 VEXYL_AI_INTEL_AUTO_SEED=false
 VEXYL_AI_INTEL_SIGNAL_SCORE=70
 VEXYL_AI_INTEL_SIGNAL_WEIGHT=4
+# Privacy-preserving runtime correlation history. Allowed range: 1-720 hours.
+VEXYL_AI_HISTORY_RETENTION_HOURS=24

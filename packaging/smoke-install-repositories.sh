@@ -134,10 +134,27 @@ EOF
     test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /etc/vexyl/guard.conf
+    grep -q "^VEXYL_AI_HISTORY_RETENTION_HOURS=24$" /etc/vexyl/guard.conf || {
+      printf "APT package is missing the AI history retention default.\n" >&2
+      exit 1
+    }
     test -f /etc/vexyl/release-signing-public.pem
     test -f /etc/vexyl/policy-keys.d/vexyl-policy-dev-1.pem
-    /usr/sbin/vexyl-guard status | grep -q "Vexyl Guard"
-    vexyl threat --db /var/lib/vexyl/ai_threats.sqlite search prompt | grep -qi prompt
+    agent_status="$(/usr/sbin/vexyl-guard status)"
+    grep -q "Vexyl Guard" <<<"$agent_status" || {
+      printf "APT package agent status check failed:\n%s\n" "$agent_status" >&2
+      exit 1
+    }
+    threat_search="$(vexyl threat --db /var/lib/vexyl/ai_threats.sqlite search prompt)"
+    grep -qi prompt <<<"$threat_search" || {
+      printf "APT package threat database search returned no prompt records.\n" >&2
+      exit 1
+    }
+    runtime_status="$(vexyl threat --db /var/lib/vexyl/ai_threats.sqlite runtime-status)"
+    grep -q "\"retention_hours\": 24" <<<"$runtime_status" || {
+      printf "APT package runtime history status check failed:\n%s\n" "$runtime_status" >&2
+      exit 1
+    }
   '
 }
 
@@ -166,10 +183,27 @@ EOF
     test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
     test -f /etc/vexyl/guard.conf
+    grep -q "^VEXYL_AI_HISTORY_RETENTION_HOURS=24$" /etc/vexyl/guard.conf || {
+      printf "DNF package is missing the AI history retention default.\n" >&2
+      exit 1
+    }
     test -f /etc/vexyl/release-signing-public.pem
     test -f /etc/vexyl/policy-keys.d/vexyl-policy-dev-1.pem
-    /usr/sbin/vexyl-guard status | grep -q "Vexyl Guard"
-    vexyl threat --db /var/lib/vexyl/ai_threats.sqlite search prompt | grep -qi prompt
+    agent_status="$(/usr/sbin/vexyl-guard status)"
+    grep -q "Vexyl Guard" <<<"$agent_status" || {
+      printf "DNF package agent status check failed:\n%s\n" "$agent_status" >&2
+      exit 1
+    }
+    threat_search="$(vexyl threat --db /var/lib/vexyl/ai_threats.sqlite search prompt)"
+    grep -qi prompt <<<"$threat_search" || {
+      printf "DNF package threat database search returned no prompt records.\n" >&2
+      exit 1
+    }
+    runtime_status="$(vexyl threat --db /var/lib/vexyl/ai_threats.sqlite runtime-status)"
+    grep -q "\"retention_hours\": 24" <<<"$runtime_status" || {
+      printf "DNF package runtime history status check failed:\n%s\n" "$runtime_status" >&2
+      exit 1
+    }
   '
 }
 

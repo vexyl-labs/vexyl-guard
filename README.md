@@ -213,6 +213,19 @@ sudo vexyl-guard validate-config
 
 Warnings describe optional or degraded capabilities. Configuration errors return a nonzero exit status and should be resolved before enforcement.
 
+## Runtime AI Defense
+
+AI applications, model gateways, RAG pipelines, and agent runtimes can submit a redacted `vexyl.ai_event.v1` envelope before a memory write, plan approval, tool call, external write, or model invocation. A stable session hash enables sequence detection; a stable user hash enables aggregate volume and budget controls.
+
+```bash
+sudo vexyl threat --db /var/lib/vexyl/ai_threats.sqlite \
+  score-event --record --policy-exit-code /run/vexyl/event.json
+```
+
+The runtime layer correlates high-risk external content with later memory or tool actions, sensitive-data access with egress, repeated tool loops, aggregate token/cost use, high-diversity model probing, and model identity drift. It also enforces trusted metadata boundaries for delegated identity, inter-agent messages, orchestration fanout, human approval, and runtime oversight. Raw prompts, tool arguments, destinations, and arbitrary event context are not stored. Derived runtime history defaults to 24-hour retention.
+
+Integration contract and privacy boundary: [`docs/security/runtime-ai-defense.md`](docs/security/runtime-ai-defense.md)
+
 ## Tests
 
 ```bash
