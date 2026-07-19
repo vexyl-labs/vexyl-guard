@@ -17,6 +17,55 @@ sudo vexyl-guard status
 
 > Vexyl Guard is in public preview. Start with one non-critical host and keep provider-console access available while evaluating any root-level security agent.
 
+## OpenAI Build Week 2026
+
+Vexyl Guard fits the **Developer Tools** track as a pre-existing project that was meaningfully extended during the July 13-21 submission period. Judges should evaluate the Build Week work, not the earlier Linux host-agent baseline.
+
+The eligible extension adds four connected capabilities:
+
+- Stateful correlation across external content, memory writes, model use, agent plans, and tool calls.
+- An authenticated, local Unix-socket decision gateway with redacted request contracts.
+- Python and dependency-free Node.js integration helpers, including ASGI/FastAPI and Express policy guards.
+- Signed defensive intelligence updates with expiry, revocation, anti-rollback, atomic activation, and last-known-good recovery.
+
+### Judge Quick Start
+
+The judge demo runs from a clone with Python 3.10 or newer. It uses a temporary SQLite database and bundled public defensive records. It does not need root access, a build step, network access, an account, a token, a running daemon, or private intelligence data.
+
+```bash
+git clone https://github.com/vexyl-labs/vexyl-guard.git
+cd vexyl-guard
+./scripts/build-week-demo.sh
+```
+
+The demo searches the public prompt-injection baseline, allows an explicitly scoped read-only tool action, records a redacted high-risk external-content event, and then blocks the same otherwise-authorized tool action when it follows that event in the same session. It finishes by returning history counts without raw prompts or tool arguments.
+
+Supported production platforms are Linux hosts using Debian/Ubuntu or Fedora/RHEL-compatible packages. The source demo and tests require Python 3.10 or newer on Linux. Node.js 20 or newer is required only for the Node integration tests.
+
+Full submission scope, architecture, evidence, form copy, and video plan: [`docs/build-week-submission.md`](docs/build-week-submission.md)
+
+### Built With Codex And GPT-5.6
+
+The public project existed before Build Week. Commit [`9dc5d17`](https://github.com/vexyl-labs/vexyl-guard/commit/9dc5d170b2365280b3ff763a0f26b2dae883ceed), dated July 12, is the documented pre-challenge baseline. From that baseline through v0.2.15, the public history records 46 changed files, 7,972 additions, and 176 deletions during the submission period.
+
+Codex with GPT-5.6 accelerated repository analysis, multi-file implementation, adversarial test design, Python/Node contract conformance, package integration, release automation, and documentation. It was used to carry one security invariant through each layer: external or model-controlled content remains data and cannot grant itself tool authority.
+
+The operator retained the consequential product and security decisions:
+
+- Extend the existing agent instead of rewriting its monitor-first host behavior.
+- Keep decisions local over an authenticated Unix socket rather than opening a network listener.
+- Accept normalized, redacted event metadata rather than collecting raw prompts, logs, or tool arguments.
+- Require independent task, user-scope, and tool-policy authorization; fail closed at sensitive boundaries.
+- Keep active intelligence private while publishing interfaces, safe fallback records, tests, and signed update verification.
+- Require authenticated, anti-rollback intelligence delivery with atomic activation and recovery.
+
+The principal eligible implementation commits are:
+
+- [`2f203dd`](https://github.com/vexyl-labs/vexyl-guard/commit/2f203dde438b40d85803fbcf7158edd127956b35): stateful AI runtime defense.
+- [`17bab48`](https://github.com/vexyl-labs/vexyl-guard/commit/17bab48bcfa167229e8b9c5401f60e89a8018ca7): authenticated local AI decision gateway.
+- [`4f501f4`](https://github.com/vexyl-labs/vexyl-guard/commit/4f501f4a5841a10138f09e5311eda54e5980c030): framework policy guards and cross-language conformance.
+- [`b4b03f0`](https://github.com/vexyl-labs/vexyl-guard/commit/b4b03f035be07fd0a45d720dc223a519ec69b06b): signed intelligence updates and recovery.
+
 ## Why Vexyl Guard
 
 Internet-facing Linux servers rarely receive only one kind of hostile traffic. Authentication attempts, path guessing, scanner requests, exploit probes, and application-specific attacks can arrive from the same source or change rapidly across categories.
