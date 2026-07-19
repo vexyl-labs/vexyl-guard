@@ -133,7 +133,15 @@ EOF
     test -x /usr/bin/vexyl
     test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
+    test -f /usr/lib/systemd/system/vexyl-ai-gateway.service
+    test -f /usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
     test -f /etc/vexyl/guard.conf
+    test -f /etc/vexyl/ai-gateway.conf
+    test "$(stat -c %a /etc/vexyl)" = 750
+    test "$(stat -c %G /etc/vexyl)" = vexyl
+    test "$(stat -c %a /etc/vexyl/ai-gateway.token)" = 640
+    test "$(stat -c %G /etc/vexyl/ai-gateway.token)" = vexyl
+    test ! -e /etc/systemd/system/multi-user.target.wants/vexyl-ai-gateway.service
     grep -q "^VEXYL_AI_HISTORY_RETENTION_HOURS=24$" /etc/vexyl/guard.conf || {
       printf "APT package is missing the AI history retention default.\n" >&2
       exit 1
@@ -155,6 +163,26 @@ EOF
       printf "APT package runtime history status check failed:\n%s\n" "$runtime_status" >&2
       exit 1
     }
+    VEXYL_AI_GATEWAY_DB=/tmp/vexyl-ai.sqlite \
+      VEXYL_AI_GATEWAY_SOCKET=/tmp/vexyl-ai.sock \
+      VEXYL_AI_GATEWAY_TOKEN_FILE=/etc/vexyl/ai-gateway.token \
+      VEXYL_AI_GATEWAY_SOCKET_MODE=0600 \
+      VEXYL_AI_GATEWAY_SOCKET_GROUP= \
+      vexyl gateway serve >/tmp/vexyl-ai-gateway.log 2>&1 &
+    gateway_pid="$!"
+    trap "kill $gateway_pid >/dev/null 2>&1 || true" EXIT
+    for attempt in $(seq 1 50); do
+      test -S /tmp/vexyl-ai.sock && break
+      sleep 0.1
+    done
+    test -S /tmp/vexyl-ai.sock
+    VEXYL_AI_GATEWAY_SOCKET=/tmp/vexyl-ai.sock \
+      VEXYL_AI_GATEWAY_TOKEN_FILE=/etc/vexyl/ai-gateway.token \
+      vexyl gateway health >/dev/null
+    kill "$gateway_pid"
+    wait "$gateway_pid"
+    trap - EXIT
+    test ! -e /tmp/vexyl-ai.sock
   '
 }
 
@@ -182,7 +210,15 @@ EOF
     test -x /usr/bin/vexyl
     test -x /usr/lib/vexyl/install-report.sh
     test -f /usr/lib/systemd/system/vexyl-guard.service
+    test -f /usr/lib/systemd/system/vexyl-ai-gateway.service
+    test -f /usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
     test -f /etc/vexyl/guard.conf
+    test -f /etc/vexyl/ai-gateway.conf
+    test "$(stat -c %a /etc/vexyl)" = 750
+    test "$(stat -c %G /etc/vexyl)" = vexyl
+    test "$(stat -c %a /etc/vexyl/ai-gateway.token)" = 640
+    test "$(stat -c %G /etc/vexyl/ai-gateway.token)" = vexyl
+    test ! -e /etc/systemd/system/multi-user.target.wants/vexyl-ai-gateway.service
     grep -q "^VEXYL_AI_HISTORY_RETENTION_HOURS=24$" /etc/vexyl/guard.conf || {
       printf "DNF package is missing the AI history retention default.\n" >&2
       exit 1
@@ -204,6 +240,26 @@ EOF
       printf "DNF package runtime history status check failed:\n%s\n" "$runtime_status" >&2
       exit 1
     }
+    VEXYL_AI_GATEWAY_DB=/tmp/vexyl-ai.sqlite \
+      VEXYL_AI_GATEWAY_SOCKET=/tmp/vexyl-ai.sock \
+      VEXYL_AI_GATEWAY_TOKEN_FILE=/etc/vexyl/ai-gateway.token \
+      VEXYL_AI_GATEWAY_SOCKET_MODE=0600 \
+      VEXYL_AI_GATEWAY_SOCKET_GROUP= \
+      vexyl gateway serve >/tmp/vexyl-ai-gateway.log 2>&1 &
+    gateway_pid="$!"
+    trap "kill $gateway_pid >/dev/null 2>&1 || true" EXIT
+    for attempt in $(seq 1 50); do
+      test -S /tmp/vexyl-ai.sock && break
+      sleep 0.1
+    done
+    test -S /tmp/vexyl-ai.sock
+    VEXYL_AI_GATEWAY_SOCKET=/tmp/vexyl-ai.sock \
+      VEXYL_AI_GATEWAY_TOKEN_FILE=/etc/vexyl/ai-gateway.token \
+      vexyl gateway health >/dev/null
+    kill "$gateway_pid"
+    wait "$gateway_pid"
+    trap - EXIT
+    test ! -e /tmp/vexyl-ai.sock
   '
 }
 

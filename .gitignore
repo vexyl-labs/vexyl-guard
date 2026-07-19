@@ -24,6 +24,8 @@ tests/run-intel-tests.py
 *.sqlite
 *.sqlite3
 *.db
+*.sock
+*.token
 *.tsv
 dist/
 coverage/

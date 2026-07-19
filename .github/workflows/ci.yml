@@ -41,6 +41,11 @@ jobs:
           bash -n scripts/notify-workflow-failure.sh
           bash -n scripts/prepare-release.sh
 
+      - name: Check Node.js integration client syntax
+        run: |
+          node --check integrations/node/vexyl-guard-client.mjs
+          node tests/test_node_gateway_client.mjs
+
       - name: Run agent fixtures
         run: tests/run-agent-fixtures.sh
 

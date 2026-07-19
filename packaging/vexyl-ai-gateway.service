@@ -1,0 +1,40 @@
+[Unit]
+Description=Vexyl Guard local AI decision gateway
+Documentation=https://vexyl.dev/ai-threat-security/
+After=local-fs.target
+
+[Service]
+Type=simple
+Group=vexyl
+EnvironmentFile=-/etc/vexyl/ai-gateway.conf
+ExecStartPre=/usr/bin/test -r /etc/vexyl/ai-gateway.token
+ExecStart=/usr/bin/vexyl gateway serve
+Restart=on-failure
+RestartSec=3s
+RuntimeDirectory=vexyl
+RuntimeDirectoryMode=0750
+StateDirectory=vexyl
+ConfigurationDirectory=vexyl
+ConfigurationDirectoryMode=0750
+UMask=0007
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

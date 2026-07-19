@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,18 @@ from .database import (
     search_threats,
     seed_db,
     validate_seed_file,
+)
+from .client import GatewayClientError, VexylGatewayClient
+from .gateway import (
+    DEFAULT_DB_PATH as DEFAULT_GATEWAY_DB_PATH,
+    DEFAULT_MAX_BODY_BYTES,
+    DEFAULT_SOCKET_PATH,
+    DEFAULT_TOKEN_FILE,
+    GatewayConfigurationError,
+    create_gateway_token_file,
+    parse_socket_mode,
+    read_gateway_token,
+    serve_gateway,
 )
 from .models import RuntimeAIEvent
 from .scoring import (
@@ -120,7 +133,65 @@ def main(argv: list[str] | None = None) -> int:
         help="Confirm deletion without an interactive prompt.",
     )
 
+    gateway = subparsers.add_parser(
+        "gateway", help="Run or query the authenticated local AI decision gateway."
+    )
+    gateway.add_argument(
+        "--db",
+        default=os.environ.get("VEXYL_AI_GATEWAY_DB", DEFAULT_GATEWAY_DB_PATH),
+        help="SQLite threat database path.",
+    )
+    gateway.add_argument(
+        "--socket",
+        default=os.environ.get("VEXYL_AI_GATEWAY_SOCKET", DEFAULT_SOCKET_PATH),
+        help="Unix socket path.",
+    )
+    gateway.add_argument(
+        "--token-file",
+        default=os.environ.get("VEXYL_AI_GATEWAY_TOKEN_FILE", DEFAULT_TOKEN_FILE),
+        help="Bearer token file path.",
+    )
+    gateway_sub = gateway.add_subparsers(dest="gateway_command")
+
+    init_token = gateway_sub.add_parser(
+        "init-token", help="Create a private local gateway bearer token."
+    )
+    init_token.add_argument("--force", action="store_true")
+    init_token.add_argument(
+        "--group",
+        default=os.environ.get("VEXYL_AI_GATEWAY_SOCKET_GROUP") or None,
+        help="Optional group granted read access to the token.",
+    )
+
+    serve = gateway_sub.add_parser(
+        "serve", help="Serve authenticated decisions over a local Unix socket."
+    )
+    serve.add_argument(
+        "--max-body-bytes",
+        type=int,
+        default=int(
+            os.environ.get("VEXYL_AI_GATEWAY_MAX_BODY_BYTES", DEFAULT_MAX_BODY_BYTES)
+        ),
+    )
+    serve.add_argument(
+        "--socket-mode",
+        default=os.environ.get("VEXYL_AI_GATEWAY_SOCKET_MODE", "0660"),
+    )
+    serve.add_argument(
+        "--socket-group",
+        default=os.environ.get("VEXYL_AI_GATEWAY_SOCKET_GROUP") or None,
+    )
+
+    gateway_sub.add_parser("health", help="Check the authenticated local gateway.")
+    gateway_score = gateway_sub.add_parser(
+        "score-event", help="Submit a redacted event JSON file to the local gateway."
+    )
+    gateway_score.add_argument("event_json")
+    gateway_score.add_argument("--policy-exit-code", action="store_true")
+
     args = parser.parse_args(argv)
+    if args.command == "gateway":
+        return handle_gateway_command(args, gateway)
     if args.command != "threat":
         parser.print_help()
         return 2
@@ -246,6 +317,63 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     threat.print_help()
+    return 2
+
+
+def handle_gateway_command(
+    args: argparse.Namespace, parser: argparse.ArgumentParser
+) -> int:
+    if not args.gateway_command:
+        parser.print_help()
+        return 2
+    try:
+        if args.gateway_command == "init-token":
+            path = create_gateway_token_file(
+                args.token_file, force=args.force, group=args.group
+            )
+            print_json({"ok": True, "token_file": str(path), "token_printed": False})
+            return 0
+
+        if args.gateway_command == "serve":
+            token = read_gateway_token(args.token_file)
+            serve_gateway(
+                db_path=args.db,
+                socket_path=args.socket,
+                token=token,
+                max_body_bytes=args.max_body_bytes,
+                socket_mode=parse_socket_mode(args.socket_mode),
+                socket_group=args.socket_group,
+            )
+            return 0
+
+        client = VexylGatewayClient(
+            socket_path=args.socket,
+            token_file=args.token_file,
+        )
+        if args.gateway_command == "health":
+            print_json(client.health())
+            return 0
+        if args.gateway_command == "score-event":
+            response = client.score(read_json_file(args.event_json))
+            print_json(response)
+            return (
+                int(response.get("policy_exit_code") or 0)
+                if args.policy_exit_code
+                else 0
+            )
+    except FileExistsError:
+        print(
+            f"Gateway token already exists: {args.token_file}. Use --force to rotate it.",
+            file=sys.stderr,
+        )
+        return 2
+    except (GatewayConfigurationError, GatewayClientError) as exc:
+        print(f"Gateway error: {exc}", file=sys.stderr)
+        return 2
+    except KeyboardInterrupt:
+        return 0
+
+    parser.print_help()
     return 2
 
 

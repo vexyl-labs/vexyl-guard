@@ -1,0 +1,8 @@
+# Vexyl Guard local AI decision gateway.
+# The gateway is opt-in and listens only on this Unix socket.
+VEXYL_AI_GATEWAY_DB=/var/lib/vexyl/ai_threats.sqlite
+VEXYL_AI_GATEWAY_SOCKET=/run/vexyl/ai-gateway.sock
+VEXYL_AI_GATEWAY_TOKEN_FILE=/etc/vexyl/ai-gateway.token
+VEXYL_AI_GATEWAY_SOCKET_MODE=0660
+VEXYL_AI_GATEWAY_SOCKET_GROUP=vexyl
+VEXYL_AI_GATEWAY_MAX_BODY_BYTES=65536

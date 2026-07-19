@@ -51,6 +51,8 @@ Use an application-generated opaque user hash or session hash. Stable session ha
 
 The event file should be owner-readable only and removed after scoring. Applications embedding the Python package can construct `RuntimeAIEvent` directly instead of writing a file.
 
+For long-running applications, use the authenticated local Unix-socket gateway instead of creating event files. It provides synchronous decisions, records redacted correlation facts, and includes dependency-free Python and Node.js clients. See [`ai-gateway-integration.md`](ai-gateway-integration.md).
+
 ## Score And Record
 
 Initialize the local database once:
@@ -144,6 +146,8 @@ Vexyl Guard returns a decision; the application or gateway owns the action bound
 External documents, retrieved content, email, web content, and tool output are always data. They cannot grant themselves tool authority or system/developer trust.
 
 Tool and action identifiers are matched as exact normalized values. Do not use free-form model output to populate `allowed_tools`, `user_scope`, or `tool_policy`.
+
+The gateway rejects raw `prompt`, `messages`, tool-argument, output, and arbitrary context fields. Applications should submit a short redacted security summary and normalized metadata. A gateway transport or validation failure is not an allow decision; sensitive integrations should fail closed.
 
 ## Defensive Framework Baseline
 

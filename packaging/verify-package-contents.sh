@@ -39,7 +39,12 @@ for package in "$@"; do
     "/usr/lib/vexyl/install-report.sh" \
     "/opt/vexyl/intel/cli.py" \
     "/opt/vexyl/intel/database.py" \
+    "/opt/vexyl/intel/gateway.py" \
+    "/opt/vexyl/intel/integration.py" \
+    "/usr/share/vexyl/integrations/node/vexyl-guard-client.mjs" \
     "/etc/vexyl/guard.conf" \
+    "/etc/vexyl/ai-gateway.conf" \
+    "/usr/lib/systemd/system/vexyl-ai-gateway.service" \
     "/usr/lib/systemd/system/vexyl-guard.service"; do
     if ! printf '%s\n' "$contents" | sed 's#^\./#/#' | grep -Eq "^${required}$"; then
       printf 'Package is missing required path %s: %s\n' "$required" "$package" >&2

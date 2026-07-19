@@ -75,9 +75,11 @@ stage_tree() {
   agent_path="$2"
   cli_path="$3"
   service_path="$4"
+  gateway_service_path="$(dirname "$service_path")/vexyl-ai-gateway.service"
 
   install -d -m 0755 "$dest/usr/share/doc/vexyl-guard"
   install -d -m 0755 "$dest/usr/lib/vexyl"
+  install -d -m 0755 "$dest/usr/share/vexyl/integrations/node"
   install -d -m 0755 "$dest/opt/vexyl/intel"
   install -d -m 0755 "$dest/$(dirname "$agent_path")" "$dest/$(dirname "$cli_path")"
   install -d -m 0755 "$dest/$(dirname "$service_path")"
@@ -89,8 +91,11 @@ stage_tree() {
   install -m 0755 "$ROOT_DIR/vexyl" "$dest/$cli_path"
   install -m 0755 "$ROOT_DIR/packaging/install-report.sh" "$dest/usr/lib/vexyl/install-report.sh"
   install -m 0644 "$ROOT_DIR"/intel/*.py "$dest/opt/vexyl/intel/"
+  install -m 0644 "$ROOT_DIR/integrations/node/vexyl-guard-client.mjs" \
+    "$dest/usr/share/vexyl/integrations/node/vexyl-guard-client.mjs"
 
   install -m 0640 "$ROOT_DIR/config/vexyl-guard.conf.example" "$dest/etc/vexyl/guard.conf"
+  install -m 0640 "$ROOT_DIR/config/vexyl-ai-gateway.conf.example" "$dest/etc/vexyl/ai-gateway.conf"
   sed -i "s#^VEXYL_AGENT_BIN=.*#VEXYL_AGENT_BIN=/$agent_path#" "$dest/etc/vexyl/guard.conf"
   if [ -f "$ROOT_DIR/config/release-signing-public.pem" ]; then
     install -m 0644 "$ROOT_DIR/config/release-signing-public.pem" "$dest/etc/vexyl/release-signing-public.pem"
@@ -108,9 +113,18 @@ stage_tree() {
     "$ROOT_DIR/packaging/vexyl-guard.service" >"$dest/$service_path"
   chmod 0644 "$dest/$service_path"
 
+  sed \
+    -e "s#^ExecStart=.*#ExecStart=/$cli_path gateway serve#" \
+    "$ROOT_DIR/packaging/vexyl-ai-gateway.service" >"$dest/$gateway_service_path"
+  chmod 0644 "$dest/$gateway_service_path"
+
   install -m 0644 "$ROOT_DIR/LICENSE" "$dest/usr/share/doc/vexyl-guard/LICENSE"
   install -m 0644 "$ROOT_DIR/NOTICE" "$dest/usr/share/doc/vexyl-guard/NOTICE"
   install -m 0644 "$ROOT_DIR/README.md" "$dest/usr/share/doc/vexyl-guard/README.md"
+  install -m 0644 "$ROOT_DIR/docs/security/ai-gateway-integration.md" \
+    "$dest/usr/share/doc/vexyl-guard/ai-gateway-integration.md"
+  install -m 0644 "$ROOT_DIR/docs/security/runtime-ai-defense.md" \
+    "$dest/usr/share/doc/vexyl-guard/runtime-ai-defense.md"
 }
 
 write_postinst() {
@@ -138,6 +152,19 @@ report_install() {
 install -d -m 0750 /etc/vexyl /var/lib/vexyl
 install -d -m 0755 /etc/vexyl/policy-keys.d
 report_install install_started package_configure "" configuring
+
+if ! getent group vexyl >/dev/null 2>&1; then
+  groupadd --system vexyl
+fi
+chown root:vexyl /etc/vexyl
+chmod 0750 /etc/vexyl
+if [ ! -f /etc/vexyl/ai-gateway.token ]; then
+  token_tmp="$(mktemp /etc/vexyl/.ai-gateway.token.XXXXXX)"
+  openssl rand -hex 32 >"$token_tmp"
+  chown root:vexyl "$token_tmp"
+  chmod 0640 "$token_tmp"
+  mv "$token_tmp" /etc/vexyl/ai-gateway.token
+fi
 
 if [ ! -f /etc/vexyl/revoked-policy-keys.txt ]; then
   : >/etc/vexyl/revoked-policy-keys.txt
@@ -181,6 +208,8 @@ write_prerm() {
 set -e
 
 if [ "$1" = "remove" ] && command -v systemctl >/dev/null 2>&1; then
+  systemctl stop vexyl-ai-gateway >/dev/null 2>&1 || true
+  systemctl disable vexyl-ai-gateway >/dev/null 2>&1 || true
   systemctl stop vexyl-guard >/dev/null 2>&1 || true
   systemctl disable vexyl-guard >/dev/null 2>&1 || true
 fi
@@ -224,7 +253,7 @@ Section: admin
 Priority: optional
 Architecture: all
 Maintainer: Vexyl Labs <security@vexyl.dev>
-Depends: bash, openssl, python3, systemd
+Depends: bash, openssl, passwd, python3, systemd
 Recommends: curl, nftables | iptables
 Installed-Size: ${installed_size}
 Homepage: https://vexyl.dev
@@ -236,6 +265,7 @@ Description: Lightweight Linux server security agent
 EOF
   cat >"$root/DEBIAN/conffiles" <<'EOF'
 /etc/vexyl/guard.conf
+/etc/vexyl/ai-gateway.conf
 /etc/vexyl/revoked-policy-keys.txt
 EOF
   write_postinst "$root/DEBIAN/postinst"
@@ -279,6 +309,7 @@ BuildArch: noarch
 Requires: bash
 Requires: openssl
 Requires: python3
+Requires: shadow-utils
 Recommends: curl
 Recommends: nftables
 Source0: %{name}-%{version}.tar.gz
@@ -318,6 +349,19 @@ install -d -m 0750 /etc/vexyl /var/lib/vexyl
 install -d -m 0755 /etc/vexyl/policy-keys.d
 report_install install_started package_configure "" configuring
 
+if ! getent group vexyl >/dev/null 2>&1; then
+  groupadd --system vexyl
+fi
+chown root:vexyl /etc/vexyl
+chmod 0750 /etc/vexyl
+if [ ! -f /etc/vexyl/ai-gateway.token ]; then
+  token_tmp="\$(mktemp /etc/vexyl/.ai-gateway.token.XXXXXX)"
+  openssl rand -hex 32 >"\$token_tmp"
+  chown root:vexyl "\$token_tmp"
+  chmod 0640 "\$token_tmp"
+  mv "\$token_tmp" /etc/vexyl/ai-gateway.token
+fi
+
 if [ ! -f /etc/vexyl/revoked-policy-keys.txt ]; then
   : >/etc/vexyl/revoked-policy-keys.txt
   chmod 0644 /etc/vexyl/revoked-policy-keys.txt
@@ -350,6 +394,8 @@ fi
 
 %preun
 if [ "\$1" = "0" ] && command -v systemctl >/dev/null 2>&1; then
+  systemctl stop vexyl-ai-gateway >/dev/null 2>&1 || true
+  systemctl disable vexyl-ai-gateway >/dev/null 2>&1 || true
   systemctl stop vexyl-guard >/dev/null 2>&1 || true
   systemctl disable vexyl-guard >/dev/null 2>&1 || true
 fi
@@ -363,19 +409,27 @@ fi
 %license /usr/share/doc/vexyl-guard/LICENSE
 %doc /usr/share/doc/vexyl-guard/NOTICE
 %doc /usr/share/doc/vexyl-guard/README.md
+%doc /usr/share/doc/vexyl-guard/ai-gateway-integration.md
+%doc /usr/share/doc/vexyl-guard/runtime-ai-defense.md
 %config(noreplace) /etc/vexyl/guard.conf
+%config(noreplace) /etc/vexyl/ai-gateway.conf
 %config(noreplace) /etc/vexyl/revoked-policy-keys.txt
 /etc/vexyl/release-signing-public.pem
 /etc/vexyl/policy-signing-public.pem
 /etc/vexyl/policy-keys.d/vexyl-policy-dev-1.pem
 %dir /usr/lib/vexyl
 /usr/lib/vexyl/install-report.sh
+%dir /usr/share/vexyl
+%dir /usr/share/vexyl/integrations
+%dir /usr/share/vexyl/integrations/node
+/usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
 %dir /opt/vexyl
 %dir /opt/vexyl/intel
 /opt/vexyl/intel/*.py
 /usr/bin/vexyl
 /usr/sbin/vexyl-guard
 /usr/lib/systemd/system/vexyl-guard.service
+/usr/lib/systemd/system/vexyl-ai-gateway.service
 %dir /var/lib/vexyl
 EOF
 
