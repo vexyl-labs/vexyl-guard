@@ -41,6 +41,7 @@ jobs:
           bash -n packaging/verify-repositories.sh
           bash -n scripts/notify-workflow-failure.sh
           bash -n scripts/prepare-release.sh
+          bash -n scripts/build-week-demo.sh
 
       - name: Check Node.js integration client syntax
         run: |
@@ -54,6 +55,9 @@ jobs:
 
       - name: Run public AI threat-intel contracts
         run: python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py -v
+
+      - name: Run Build Week judge demo
+        run: scripts/build-week-demo.sh
 
       - name: Run cross-language gateway conformance
         run: python3 -m tests.run_gateway_conformance
