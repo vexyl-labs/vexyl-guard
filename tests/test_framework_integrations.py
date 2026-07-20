@@ -5,6 +5,7 @@ import unittest
 from typing import Any
 
 from intel.client import GatewayClientError
+from intel.integration import DECISION_SCHEMA
 from intel.middleware import (
     MCPToolGuard,
     ModelGatewayGuard,
@@ -34,25 +35,50 @@ class FakeGatewayClient:
 def allowed_response() -> dict[str, Any]:
     return {
         "ok": True,
+        "schema": DECISION_SCHEMA,
         "request_id": "safe-request-id",
+        "recorded": True,
         "policy_exit_code": 0,
-        "decision": {"score": 0, "suggested_action": "allow/log"},
+        "decision": decision_payload(0, "allow/log", deny_tool_call=False),
     }
 
 
 def denied_response(policy_exit_code: int = 4) -> dict[str, Any]:
     return {
         "ok": True,
+        "schema": DECISION_SCHEMA,
         "request_id": "safe-request-id",
+        "recorded": True,
         "policy_exit_code": policy_exit_code,
-        "decision": {
-            "score": 78 if policy_exit_code == 4 else 58,
-            "suggested_action": (
+        "decision": decision_payload(
+            78 if policy_exit_code == 4 else 58,
+            (
                 "quarantine/block tool action"
                 if policy_exit_code == 4
                 else "require human approval or policy verifier"
             ),
-        },
+            deny_tool_call=policy_exit_code == 4,
+        ),
+    }
+
+
+def decision_payload(
+    score: int, suggested_action: str, *, deny_tool_call: bool
+) -> dict[str, Any]:
+    return {
+        "event_id": "safe-event-id",
+        "score": score,
+        "suggested_action": suggested_action,
+        "matched_attack_ids": [],
+        "matched_rules": [],
+        "reasons": [],
+        "mitigations_applied": [],
+        "trust_level": "internal_data",
+        "redacted_excerpt": "Bounded defensive summary.",
+        "deny_tool_call": deny_tool_call,
+        "correlation_scope": None,
+        "correlation_window_seconds": 0,
+        "correlated_event_count": 0,
     }
 
 

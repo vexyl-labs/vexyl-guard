@@ -5,7 +5,11 @@ import json
 from collections.abc import Awaitable, Callable, Iterable, MutableMapping
 from typing import Any
 
-from .client import GatewayClientError, VexylGatewayClient
+from .client import (
+    GatewayClientError,
+    VexylGatewayClient,
+    validate_gateway_response,
+)
 from .integration import (
     GatewayEventError,
     mcp_tool_call_event,
@@ -71,15 +75,9 @@ class VexylRequestGuard:
     async def score(self, event: dict[str, Any]) -> dict[str, Any]:
         try:
             response = await asyncio.to_thread(self.client.score, event)
+            validate_gateway_response(response)
         except (GatewayClientError, GatewayEventError) as exc:
             raise VexylPolicyUnavailable from exc
-        policy_code = response.get("policy_exit_code")
-        if (
-            not isinstance(policy_code, int)
-            or isinstance(policy_code, bool)
-            or policy_code not in {0, 3, 4}
-        ):
-            raise VexylPolicyUnavailable
         return response
 
     async def require_allowed(self, event: dict[str, Any]) -> dict[str, Any]:

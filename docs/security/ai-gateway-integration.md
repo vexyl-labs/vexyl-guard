@@ -69,6 +69,8 @@ The gateway always records the redacted decision facts so sequence detection rem
 
 Policy decisions use HTTP 200. Authentication, schema, size, and local scoring failures use non-200 responses. A security-sensitive integration must fail closed when the gateway is unavailable or returns an invalid response.
 
+The packaged Python and Node.js clients validate both sides of this contract. Requests reject unknown nested context, raw prompt/tool fields, invalid enums, and out-of-range values before transmission. Responses must use the complete v1 decision shape, confirm that correlation state was recorded, match the submitted event ID, and keep score, suggested action, tool denial, and policy exit code consistent. Unknown response fields and contradictory or downgraded decisions raise a client error instead of becoming an allow result.
+
 ## Python Integration
 
 Install the source package in the application virtual environment:

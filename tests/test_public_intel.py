@@ -6,6 +6,7 @@ import stat
 import tempfile
 import threading
 import unittest
+from copy import deepcopy
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -21,9 +22,14 @@ from intel.database import (
     validate_seed_file,
 )
 from intel.cli import main as cli_main
-from intel.client import GatewayClientError, VexylGatewayClient
+from intel.client import (
+    GatewayClientError,
+    VexylGatewayClient,
+    validate_gateway_response,
+)
 from intel.gateway import create_gateway_server, create_gateway_token_file
 from intel.integration import (
+    DECISION_SCHEMA,
     GatewayEventError,
     hash_identifier,
     rag_content_event,
@@ -38,6 +44,47 @@ from intel.scoring import (
     score_ai_event,
     score_and_record_ai_event,
 )
+
+
+def valid_gateway_response(
+    *,
+    event_id: str = "gateway-response-event",
+    score: int = 0,
+    deny_tool_call: bool = False,
+) -> dict[str, object]:
+    if score <= 24:
+        action = "allow/log"
+    elif score <= 49:
+        action = "warn/log"
+    elif score <= 69:
+        action = "require human approval or policy verifier"
+    elif score <= 84:
+        action = "quarantine/block tool action"
+    else:
+        action = "block and open incident"
+    policy_exit_code = 4 if deny_tool_call or score >= 70 else 3 if score >= 50 else 0
+    return {
+        "ok": True,
+        "schema": DECISION_SCHEMA,
+        "request_id": "gateway-response-request",
+        "recorded": True,
+        "policy_exit_code": policy_exit_code,
+        "decision": {
+            "event_id": event_id,
+            "score": score,
+            "suggested_action": action,
+            "matched_attack_ids": [],
+            "matched_rules": [],
+            "reasons": [],
+            "mitigations_applied": [],
+            "trust_level": "internal_data",
+            "redacted_excerpt": "Bounded defensive summary.",
+            "deny_tool_call": deny_tool_call,
+            "correlation_scope": None,
+            "correlation_window_seconds": 0,
+            "correlated_event_count": 0,
+        },
+    }
 
 
 class PublicThreatIntelContractTests(unittest.TestCase):
@@ -784,6 +831,46 @@ class PublicThreatIntelContractTests(unittest.TestCase):
                     "context": {"arguments": {"secret": "not-accepted"}},
                 }
             )
+
+    def test_gateway_response_contract_rejects_downgrade_and_raw_fields(self) -> None:
+        response = valid_gateway_response(event_id="expected-event", score=78)
+        self.assertIs(
+            validate_gateway_response(response, expected_event_id="expected-event"),
+            response,
+        )
+
+        invalid_responses: list[tuple[str, dict[str, object]]] = []
+
+        unrecorded = deepcopy(response)
+        unrecorded["recorded"] = False
+        invalid_responses.append(("unrecorded", unrecorded))
+
+        downgraded = deepcopy(response)
+        downgraded["policy_exit_code"] = 0
+        invalid_responses.append(("downgraded exit code", downgraded))
+
+        contradictory_action = deepcopy(response)
+        contradictory_action["decision"]["suggested_action"] = "allow/log"  # type: ignore[index]
+        invalid_responses.append(("contradictory action", contradictory_action))
+
+        raw_field = deepcopy(response)
+        raw_field["decision"]["raw_prompt"] = "must never be returned"  # type: ignore[index]
+        invalid_responses.append(("raw decision field", raw_field))
+
+        malformed_score = deepcopy(response)
+        malformed_score["decision"]["score"] = True  # type: ignore[index]
+        invalid_responses.append(("boolean score", malformed_score))
+
+        incomplete_decision = deepcopy(response)
+        del incomplete_decision["decision"]["correlation_scope"]  # type: ignore[index]
+        invalid_responses.append(("incomplete decision", incomplete_decision))
+
+        for name, invalid in invalid_responses:
+            with self.subTest(name=name), self.assertRaises(GatewayClientError):
+                validate_gateway_response(invalid)
+
+        with self.assertRaises(GatewayClientError):
+            validate_gateway_response(response, expected_event_id="different-event")
 
     def test_identifier_hashing_is_stable_and_keyed(self) -> None:
         first = hash_identifier("local-session", "example-key-material-for-tests")

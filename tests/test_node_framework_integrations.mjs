@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 
-import { VexylGatewayError } from "../integrations/node/vexyl-guard-client.mjs";
+import {
+  DECISION_SCHEMA,
+  VexylGatewayError,
+} from "../integrations/node/vexyl-guard-client.mjs";
 import {
   MCPToolGuard,
   ModelGatewayGuard,
@@ -28,24 +31,46 @@ class FakeGatewayClient {
 function allowedResponse() {
   return {
     ok: true,
+    schema: DECISION_SCHEMA,
     request_id: "safe-request-id",
+    recorded: true,
     policy_exit_code: 0,
-    decision: { score: 0, suggested_action: "allow/log" },
+    decision: decisionPayload(0, "allow/log", false),
   };
 }
 
 function deniedResponse(policyExitCode = 4) {
   return {
     ok: true,
+    schema: DECISION_SCHEMA,
     request_id: "safe-request-id",
+    recorded: true,
     policy_exit_code: policyExitCode,
-    decision: {
-      score: policyExitCode === 4 ? 78 : 58,
-      suggested_action:
-        policyExitCode === 4
-          ? "quarantine/block tool action"
-          : "require human approval or policy verifier",
-    },
+    decision: decisionPayload(
+      policyExitCode === 4 ? 78 : 58,
+      policyExitCode === 4
+        ? "quarantine/block tool action"
+        : "require human approval or policy verifier",
+      policyExitCode === 4,
+    ),
+  };
+}
+
+function decisionPayload(score, suggestedAction, denyToolCall) {
+  return {
+    event_id: "safe-event-id",
+    score,
+    suggested_action: suggestedAction,
+    matched_attack_ids: [],
+    matched_rules: [],
+    reasons: [],
+    mitigations_applied: [],
+    trust_level: "internal_data",
+    redacted_excerpt: "Bounded defensive summary.",
+    deny_tool_call: denyToolCall,
+    correlation_scope: null,
+    correlation_window_seconds: 0,
+    correlated_event_count: 0,
   };
 }
 

@@ -141,7 +141,7 @@ The shared conformance fixtures are evaluated through the real Python gateway by
 python3 -m tests.run_gateway_conformance
 ```
 
-The harness verifies matching policy outcomes for authorized read-only tools, unauthorized actions, retrieved instruction takeover, model identity drift, and disabled runtime oversight. Fixtures contain defensive summaries only, not full jailbreak payloads, exploit instructions, or malware code.
+The harness verifies matching policy outcomes for authorized read-only tools, unauthorized actions, retrieved instruction takeover, model identity drift, and disabled runtime oversight. Client tests also verify that malformed, unrecorded, mismatched, or downgraded decision responses fail closed and that nested request context cannot carry undeclared raw data. Fixtures contain defensive summaries only, not full jailbreak payloads, exploit instructions, or malware code.
 
 Run all framework contracts:
 

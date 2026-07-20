@@ -3,6 +3,7 @@ import {
   VexylGatewayError,
   mcpToolCallEvent,
   modelApiEvent,
+  validateGatewayResponse,
 } from "./vexyl-guard-client.mjs";
 
 export class VexylPolicyError extends Error {
@@ -66,14 +67,12 @@ export class VexylRequestGuard {
     let response;
     try {
       response = await this.client.score(event);
+      validateGatewayResponse(response);
     } catch (error) {
       if (error instanceof VexylGatewayError) {
         throw new VexylPolicyUnavailable({ cause: error });
       }
       throw error;
-    }
-    if (![0, 3, 4].includes(response?.policy_exit_code)) {
-      throw new VexylPolicyUnavailable();
     }
     return response;
   }
