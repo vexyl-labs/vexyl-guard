@@ -204,7 +204,7 @@ Vexyl Guard is not an Android antivirus, VPN, SSH client, third-party scanner, o
 
 ## Demo Video Plan
 
-Target length: **2 minutes 40 seconds**. Keep the final upload below three minutes. Record a clean terminal and the Vexyl Guard product page. Use a clear human or generated voiceover and no music. Do not show tokens, private logs, hostnames, IP addresses, customer data, browser bookmarks, notifications, or unrelated tabs.
+Target final length: **about 2 minutes 30 seconds**. The six generated clips total 2:24.013, leaving roughly six seconds for short transitions and the closing hold. Keep the final upload below three minutes. Record a clean terminal and browser as separate full-frame shots. Use the generated voiceover without music. Do not show tokens, private logs, hostnames, IP addresses, customer data, browser bookmarks, notifications, or unrelated tabs.
 
 ### Generated Voiceover Workflow
 
@@ -219,47 +219,125 @@ Generate the six narration blocks below as separate audio clips instead of one l
 
 ### Shot List And Narration
 
-**0:00-0:20 - Product and problem**
+Do not use a browser/terminal split screen. At 1080p it makes both surfaces too small to judge. Record each source at 1920x1080 and cut between full-frame browser and full-frame terminal shots on sentence boundaries. Use direct cuts for most changes; reserve a short four-to-six-frame dissolve for the final fade only.
 
-Show `https://vexyl.dev`, then the terminal.
+Place the audio clips on the timeline at these exact start points:
+
+| Audio clip | Start | Measured duration | End |
+| --- | ---: | ---: | ---: |
+| `pvc_001.mp3` | 0:00.000 | 0:15.569 | 0:15.569 |
+| `pvc_002.mp3` | 0:16.000 | 0:18.364 | 0:34.364 |
+| `pvc_003.mp3` | 0:35.000 | 0:45.322 | 1:20.322 |
+| `pvc_004.mp3` | 1:21.000 | 0:22.047 | 1:43.047 |
+| `pvc_005.mp3` | 1:44.000 | 0:31.164 | 2:15.164 |
+| `pvc_006.mp3` | 2:16.000 | 0:11.546 | 2:27.546 |
+
+Hold the closing frame until approximately 2:30, then end on black. The sub-second spaces between clips should remain quiet; do not fill them with sound effects.
+
+### Recording Setup
+
+For browser footage:
+
+- Use a private browser window or a clean browser profile.
+- Hide the bookmarks bar, unrelated tabs, extensions, notifications, and profile details.
+- Use full-screen mode or crop the browser chrome from the capture.
+- Set zoom so the relevant heading and four to six lines of supporting text are readable.
+- Stop moving the pointer before each shot; do not circle or repeatedly highlight text.
+
+For terminal footage:
+
+- Use a dark, opaque theme with an 18-20 px monospace font.
+- Keep approximately 120 columns and 32-36 visible rows.
+- Hide the terminal title bar or crop it out.
+- Start a clean shell so the prompt does not expose a username or hostname:
+
+```bash
+cd ~/vexyl
+env PS1='$ ' bash --noprofile --norc
+clear
+```
+
+Record browser and terminal footage independently, then assemble them under the finished voice track. This is easier to align and avoids rushed live window switching.
+
+### Exact Timeline
+
+**0:00-0:16 - Product and problem (`pvc_001.mp3`)**
+
+- **0:00-0:08:** Show the first viewport of `https://vexyl.dev` full frame. Keep the Vexyl Guard logo, product name, main description, and primary action visible. Do not scroll yet.
+- **0:08-0:16:** Hard cut to the clean terminal by itself. Show this command already typed, with the cursor at the end, but do not press Enter:
+
+```bash
+VEXYL_RECORDING_PAUSE_SECONDS=7 ./scripts/build-week-demo.sh --recording
+```
+
+The homepage supports the first sentence. The waiting terminal supports the second sentence about the local gateway and signals that a real demonstration is next. Do not place the website and terminal in the same frame.
 
 > Vexyl Guard is an open-source, monitor-first Linux security agent. For Build Week, I extended it with a local policy gateway for AI-connected workloads, where one retrieved document can influence memory, an agent plan, and a later tool call.
 
-**0:20-0:43 - Eligible Build Week scope**
+**0:16-0:35 - Eligible Build Week scope (`pvc_002.mp3`)**
 
-Show the Build Week section of `README.md`, including the four eligible commits.
+- **0:16-0:25:** Show the rendered GitHub `README.md` at the `OpenAI Build Week 2026` heading. Frame the pre-existing-project disclosure and the capability list.
+- **0:25-0:35:** Scroll once to `Built With Codex And GPT-5.6`, then stop with the July 12 baseline and the first four principal implementation commits visible. Do not keep scrolling while viewers are trying to read.
+
+This entire clip stays in the browser. The narration names the four core technical pillars while the repository supplies dated, public evidence.
 
 > The project existed before the event, so this submission is specifically the work added after July thirteenth: stateful AI runtime correlation, an authenticated Unix-socket gateway, Python and Node framework guards, and signed intelligence updates.
 
-**0:43-1:48 - Working demo**
+**0:35-1:21 - Working demo (`pvc_003.mp3`)**
 
-For recording, run:
+Return to the same clean terminal from the opening. At **0:35**, press Enter on the prepared command:
 
 ```bash
-./scripts/build-week-demo.sh --recording
+VEXYL_RECORDING_PAUSE_SECONDS=7 ./scripts/build-week-demo.sh --recording
 ```
 
-Recording mode runs the same local judge demo and adds six-second pauses between result sections so the terminal remains synchronized with the narration. The normal judge command remains `./scripts/build-week-demo.sh` with no delay.
+Use one continuous terminal recording. The seven-second pauses keep each result on screen long enough for the corresponding narration.
 
-Pause briefly on the search, allow, external-content, correlated deny, and privacy-status outputs.
+The command completes in approximately 42.8 seconds on the current machine. That leaves about 2.5 seconds at the end of the 45.322-second narration clip for the `Demo complete` hold.
+
+| Video time | Terminal should show | Narration it supports |
+| --- | --- | --- |
+| 0:35-0:42 | Demo header and `Initialize the offline defensive baseline` with 22 attack patterns and 22 rules | No-root, public defensive records, temporary local database |
+| 0:42-0:49 | `Search direct and indirect prompt-injection records` with `AI-PI-001` and `AI-PI-002` | Vexyl finds direct and indirect prompt-injection patterns |
+| 0:49-0:56 | `Allow a scoped, read-only tool action` with score `0`, `allow/log`, and policy exit `0` | Tool, user scope, and policy agree |
+| 0:56-1:03 | `Record a redacted, high-risk external-content event` with `untrusted_data` and `AI-PI-002` | Retrieved content is marked untrusted and only derived facts are recorded |
+| 1:03-1:10 | `Stop the later tool action in the same session` with score `100`, `deny_tool_call: true`, and policy exit `4` | The otherwise-authorized action is blocked at the correlation boundary |
+| 1:10-1:17 | `Inspect privacy-safe runtime history` with database mode `0600` and both raw-content fields `false` | Status returns counts without raw prompts or tool arguments |
+| 1:17-1:21 | `Demo complete` and the temporary-file removal message | Final clause and a brief readability hold |
+
+The script changes sections automatically. Do not manually scroll during this shot. If one output arrives slightly before its narrated phrase, cut the terminal capture at the blank line before that heading and extend the preceding still frame by a few frames.
 
 > This no-root demo uses public defensive records and a temporary local database. First, Vexyl finds direct and indirect prompt-injection patterns. A read-only tool action is allowed because the tool, user scope, and policy all agree. Next, retrieved content attempts to redirect the task. Vexyl marks it untrusted and records only derived, redacted facts. The same otherwise-authorized tool action now follows that event in the same session, so Vexyl blocks it at the correlation boundary. Status returns a count, not raw prompts or tool arguments, and the temporary data is removed.
 
-**1:48-2:15 - Architecture and delivery**
+**1:21-1:44 - Architecture and delivery (`pvc_004.mp3`)**
 
-Show the architecture block in this document, then the v0.2.16 release page without exposing unrelated browser UI.
+- **1:21-1:32:** Hard cut to the rendered `Architecture` section in this document. Frame the full application-to-socket-to-decision flow without scrolling.
+- **1:32-1:44:** Hard cut to the GitHub v0.2.16 release page. Show `Vexyl Guard v0.2.16`, the `Latest` badge, and the signed release description. During the second half, make one short scroll so the signed checksum, signature, public key, DEB, and RPM assets are visible.
+
+Keep both browser shots full frame. Do not show the repository sidebar or unrelated GitHub notifications.
 
 > Applications send normalized metadata over an authenticated local Unix socket; Vexyl never opens a TCP listener for this path. Defensive intelligence updates must pass signature, expiry, revocation, monotonic sequence, and shape checks before atomic activation, with last-known-good recovery if needed.
 
-**2:15-2:43 - Codex and GPT-5.6**
+**1:44-2:16 - Codex and GPT-5.6 (`pvc_005.mp3`)**
 
-Show the README's Codex section and a terminal view of the dated commit history.
+- **1:44-1:56:** Show the README's `Built With Codex And GPT-5.6` section. Frame the paragraph describing repository analysis and multi-file implementation.
+- **1:56-2:08:** Cut to the terminal alone. Pre-run the following command and show the dated output; the command itself may remain at the top of the frame:
+
+```bash
+git log -14 --date=short --format='%ad  %h  %s' dade7e7
+```
+
+- **2:08-2:16:** Cut back to the README and frame the `operator retained the consequential product and security decisions` bullets.
+
+Do not rapidly scroll through source files. The dated history and written decision record are stronger, more legible evidence of Codex-assisted implementation and human ownership.
 
 > I used Codex with GPT-5.6 to inspect the existing architecture and implement coordinated Python, Node, Bash, systemd, test, packaging, and documentation changes. It accelerated adversarial test design and cross-language conformance. I kept the key decisions human-owned: local over networked, redacted over raw collection, explicit authorization over model-declared permission, and fail closed for sensitive actions.
 
-**2:43-2:52 - Close**
+**2:16-2:30 - Close (`pvc_006.mp3`)**
 
-Return to the Vexyl Guard page.
+- **2:16-2:27.5:** Return to the Vexyl Guard homepage first viewport. Keep the product name and primary actions visible.
+- **2:22:** Fade in a small, high-contrast lower-third with `vexyl.dev` and `github.com/vexyl-labs/vexyl-guard`. Keep it within the lower safe area without covering site copy.
+- **2:27.5-2:30:** Hold the final frame after narration ends, then dissolve to black over four to six frames.
 
 > Vexyl Guard brings host visibility and AI runtime policy into one operator-controlled, open-source Linux project. The repository and judge demo are linked below.
 
