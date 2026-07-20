@@ -181,6 +181,10 @@ Tool and action identifiers are matched as exact normalized values. Do not use f
 
 The gateway rejects raw `prompt`, `messages`, tool-argument, output, and arbitrary context fields. Applications should submit a short redacted security summary and normalized metadata. A gateway transport or validation failure is not an allow decision; sensitive integrations should fail closed.
 
+The public synthetic regression corpus, metric definitions, safety validation,
+and limitations are documented in
+[`ai-runtime-evaluation.md`](ai-runtime-evaluation.md).
+
 ## Defensive Framework Baseline
 
 The runtime contracts map to the OWASP Top 10 for LLM Applications and the OWASP Top 10 for Agentic Applications 2026. Vexyl Guard uses those public frameworks as taxonomy, while local decisions remain grounded in observed event context and explicit application policy.

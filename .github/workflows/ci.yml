@@ -34,8 +34,8 @@ jobs:
 
       - name: Check Python quality
         run: |
-          ruff check intel integrations/examples/python tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py tests/run_gateway_conformance.py tests/run_example_compatibility.py
-          ruff format --check intel integrations/examples/python tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py tests/run_gateway_conformance.py tests/run_example_compatibility.py
+          ruff check intel integrations/examples/python tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py tests/test_ai_runtime_evaluation.py tests/run_gateway_conformance.py tests/run_example_compatibility.py tests/run_ai_runtime_evaluation.py
+          ruff format --check intel integrations/examples/python tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py tests/test_ai_runtime_evaluation.py tests/run_gateway_conformance.py tests/run_example_compatibility.py tests/run_ai_runtime_evaluation.py
 
       - name: Check shell syntax
         run: |
@@ -70,7 +70,10 @@ jobs:
         run: tests/run-agent-fixtures.sh
 
       - name: Run public AI threat-intel contracts
-        run: python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py -v
+        run: python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py tests/test_ai_runtime_evaluation.py -v
+
+      - name: Enforce AI runtime evaluation thresholds
+        run: python3 -m tests.run_ai_runtime_evaluation
 
       - name: Run Build Week judge demo
         run: scripts/build-week-demo.sh

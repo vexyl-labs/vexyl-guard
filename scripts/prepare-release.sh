@@ -291,11 +291,13 @@ run_checks() {
       tests/test_public_intel.py \
       tests/test_framework_integrations.py \
       tests/test_intel_updates.py \
+      tests/test_ai_runtime_evaluation.py \
       -v
     node tests/test_node_gateway_client.mjs
     node tests/test_node_framework_integrations.mjs
     python3 -m tests.run_gateway_conformance
     python3 -m tests.run_example_compatibility
+    python3 -m tests.run_ai_runtime_evaluation
   )
 
   log "building preview packages"

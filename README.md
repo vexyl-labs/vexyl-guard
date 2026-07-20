@@ -292,6 +292,8 @@ The runtime layer correlates high-risk external content with later memory or too
 
 Integration contract and privacy boundary: [`docs/security/runtime-ai-defense.md`](docs/security/runtime-ai-defense.md)
 
+Synthetic scoring regression methodology and limitations: [`docs/security/ai-runtime-evaluation.md`](docs/security/ai-runtime-evaluation.md)
+
 Packages also include an opt-in authenticated Unix-socket gateway for synchronous application checks. It is installed disabled and never opens a TCP port:
 
 ```bash
@@ -332,6 +334,8 @@ python3 -m unittest tests/test_intel_updates.py -v
 node tests/test_node_framework_integrations.mjs
 python3 -m tests.run_gateway_conformance
 python3 -m tests.run_example_compatibility
+python3 -m unittest tests/test_ai_runtime_evaluation.py -v
+python3 -m tests.run_ai_runtime_evaluation
 # After installing the optional example dependencies:
 python3 -m unittest tests/test_example_apps.py -v
 node tests/test_express_example.mjs
