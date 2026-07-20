@@ -39,6 +39,7 @@ for package in "$@"; do
     "/usr/lib/vexyl/install-report.sh" \
     "/opt/vexyl/intel/cli.py" \
     "/opt/vexyl/intel/database.py" \
+    "/opt/vexyl/intel/explanations.py" \
     "/opt/vexyl/intel/gateway.py" \
     "/opt/vexyl/intel/integration.py" \
     "/opt/vexyl/intel/middleware.py" \

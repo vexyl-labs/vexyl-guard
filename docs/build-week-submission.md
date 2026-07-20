@@ -79,6 +79,7 @@ A second challenge was making enforcement consistent across languages and framew
 - Added a complete local runtime decision path without changing the host agent's monitor-first default.
 - Added stateful security checks while keeping raw prompts and tool arguments out of runtime history.
 - Shipped authenticated gateway and framework integrations without opening a TCP port.
+- Added bounded operator explanations with stable factor codes and no raw event content.
 - Added signature, revocation, expiry, sequence, atomicity, and recovery checks for intelligence updates.
 - Released the work as v0.2.15 with public source, signed artifacts, APT/DNF packages, CI, and live install canaries.
 
@@ -90,7 +91,7 @@ We also learned that authorization context must come from trusted application po
 
 ### What's Next
 
-Next work will expand public integration examples, operator-facing decision explanations, compatibility testing, and privacy-preserving evaluation fixtures. Enforcement remains opt-in and operator-controlled. Any future action workflow will keep explicit approval, auditability, least privilege, and redaction as hard requirements.
+Next work will expand public integration examples, compatibility testing, privacy-preserving evaluation fixtures, and operator action runbooks. Enforcement remains opt-in and operator-controlled. Any future action workflow will keep explicit approval, auditability, least privilege, and redaction as hard requirements.
 
 ## Build Week Eligibility And Evidence
 

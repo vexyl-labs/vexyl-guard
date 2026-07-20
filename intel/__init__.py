@@ -8,7 +8,18 @@ from .database import (
     search_threats,
     seed_db,
 )
-from .models import RuntimeAIEvent, RiskDecision
+from .explanations import (
+    EXPLANATION_SCHEMA,
+    ExplanationError,
+    decision_from_document,
+    explain_decision,
+)
+from .models import (
+    DecisionExplanation,
+    ExplanationFactor,
+    RiskDecision,
+    RuntimeAIEvent,
+)
 from .scoring import (
     evaluate_agent_plan,
     evaluate_tool_call,
@@ -30,9 +41,15 @@ from .updates import (
 __all__ = [
     "RuntimeAIEvent",
     "RiskDecision",
+    "DecisionExplanation",
+    "ExplanationFactor",
+    "EXPLANATION_SCHEMA",
+    "ExplanationError",
     "IntelUpdateError",
     "apply_intel_bundle",
     "default_db_path",
+    "decision_from_document",
+    "explain_decision",
     "evaluate_agent_plan",
     "evaluate_tool_call",
     "init_db",

@@ -17,6 +17,12 @@ from .database import (
     validate_seed_file,
 )
 from .client import GatewayClientError, VexylGatewayClient
+from .explanations import (
+    ExplanationError,
+    decision_from_document,
+    explain_decision,
+    is_decision_document,
+)
 from .gateway import (
     DEFAULT_DB_PATH as DEFAULT_GATEWAY_DB_PATH,
     DEFAULT_MAX_BODY_BYTES,
@@ -101,6 +107,27 @@ def main(argv: list[str] | None = None) -> int:
         "--policy-exit-code",
         action="store_true",
         help="Return 3 for approval-required decisions or 4 for deny/quarantine decisions.",
+    )
+
+    explain = threat_sub.add_parser(
+        "explain",
+        help="Explain a runtime event or v1 decision using privacy-safe factor codes.",
+    )
+    explain.add_argument("input_json")
+    explain.add_argument(
+        "--record",
+        action="store_true",
+        help="Store derived runtime facts when the input is an event.",
+    )
+    explain.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the versioned explanation object as JSON.",
+    )
+    explain.add_argument(
+        "--policy-exit-code",
+        action="store_true",
+        help="Return the explanation's policy exit code for process gating.",
     )
 
     scan_prompt_parser = threat_sub.add_parser(
@@ -342,6 +369,40 @@ def main(argv: list[str] | None = None) -> int:
             if decision.score >= 50:
                 return 3
         return 0
+
+    if args.threat_command == "explain":
+        document = read_json_file(args.input_json)
+        try:
+            if is_decision_document(document):
+                if args.record:
+                    raise ExplanationError(
+                        "--record requires a runtime event, not a completed decision"
+                    )
+                decision = decision_from_document(document)
+                input_kind = "decision"
+            else:
+                event = RuntimeAIEvent.from_dict(document)
+                decision = (
+                    score_and_record_ai_event(event, db_path=db_path)
+                    if args.record
+                    else score_ai_event(event, db_path=db_path)
+                )
+                input_kind = "event"
+            explanation = explain_decision(decision, db_path=db_path)
+        except ExplanationError as exc:
+            raise SystemExit(f"Unable to explain decision safely: {exc}") from exc
+
+        if args.json:
+            print_json(
+                {
+                    "ok": True,
+                    "input_kind": input_kind,
+                    "explanation": explanation.to_dict(),
+                }
+            )
+        else:
+            print_decision_explanation(explanation.to_dict())
+        return explanation.policy_exit_code if args.policy_exit_code else 0
 
     if args.threat_command == "scan-prompt":
         text = read_text_file(args.file)
@@ -605,6 +666,44 @@ def print_search_results(results: list[dict[str, Any]]) -> None:
             f"family={result['family']}\tseverity={result['severity']}"
         )
         print(f"  {result['summary']}")
+
+
+def print_decision_explanation(explanation: dict[str, Any]) -> None:
+    print("Vexyl Guard decision explanation")
+    event_ref = explanation.get("event_ref")
+    if event_ref:
+        print(f"Event reference: {event_ref}")
+    print(
+        f"Outcome: {str(explanation['outcome']).replace('_', ' ')} "
+        f"({explanation['score']}/100, {explanation['risk_band']} risk)"
+    )
+    print(f"Policy exit code: {explanation['policy_exit_code']}")
+    print(f"Suggested action: {explanation['suggested_action']}")
+    print(f"Summary: {explanation['operator_summary']}")
+    print(f"Trust level: {str(explanation['trust_level']).replace('_', ' ')}")
+    print("\nDecision factors")
+    for factor in explanation["factors"]:
+        effect = str(factor["effect"]).replace("_", " ")
+        severity = (
+            f", severity {factor['severity']}/10"
+            if factor.get("severity") is not None
+            else ""
+        )
+        print(f"- [{factor['code']}] {factor['title']} ({effect}{severity})")
+        print(f"  {factor['detail']}")
+    omitted = int(explanation.get("omitted_factor_count") or 0)
+    if omitted:
+        print(
+            f"- {omitted} additional derived factor(s) were withheld because no "
+            "approved operator wording is registered."
+        )
+    print("\nNext steps")
+    for step in explanation["next_steps"]:
+        print(f"- {step}")
+    print(
+        "\nPrivacy: derived facts only; raw content, tool arguments, destinations, "
+        "and raw or non-opaque source identifiers are omitted."
+    )
 
 
 if __name__ == "__main__":

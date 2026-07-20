@@ -236,3 +236,38 @@ class RiskDecision:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class ExplanationFactor:
+    code: str
+    category: str
+    title: str
+    detail: str
+    effect: str
+    attack_id: str | None = None
+    severity: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class DecisionExplanation:
+    schema: str
+    decision_schema: str
+    event_ref: str | None
+    score: int
+    risk_band: str
+    outcome: str
+    policy_exit_code: int
+    suggested_action: str
+    operator_summary: str
+    trust_level: str
+    factors: list[ExplanationFactor] = field(default_factory=list)
+    next_steps: list[str] = field(default_factory=list)
+    omitted_factor_count: int = 0
+    privacy: dict[str, bool] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

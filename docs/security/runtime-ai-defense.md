@@ -88,6 +88,36 @@ Exit codes:
 
 Always parse the JSON decision. The exit code is a compact process-control signal, not a replacement for the matched rules, reasons, and suggested action.
 
+## Operator Decision Explanations
+
+Use `explain` when an operator needs a concise account of a decision without
+opening raw prompt, document, tool-argument, destination, or identity data:
+
+```bash
+sudo vexyl threat --db /var/lib/vexyl/ai_threats.sqlite \
+  explain /run/vexyl/event.json
+```
+
+The input may be a runtime event, a direct `RiskDecision` JSON object, the JSON
+envelope printed by `score-event`, or a complete authenticated gateway response.
+Use `--json` for the versioned `vexyl.decision_explanation.v1` object and
+`--policy-exit-code` when the explanation command also acts as a process gate:
+
+```bash
+sudo vexyl threat --db /var/lib/vexyl/ai_threats.sqlite \
+  explain --json --policy-exit-code /run/vexyl/decision.json
+```
+
+Rule factors retain their stable IDs, such as
+`rule:AI-PI-002:external_instruction_takeover`. Scored context and verified
+mitigations receive separate stable codes. Operator wording comes only from a
+bounded internal registry; arbitrary reason prose from an input decision is
+never copied into the explanation. Excerpts are omitted entirely. A supplied
+event identifier is returned only when it is an opaque UUID.
+
+This is a sidecar operator contract. It does not add fields to or weaken the
+strict `vexyl.risk_decision.v1` gateway response.
+
 ## Correlated Behaviors
 
 The local runtime layer currently detects:

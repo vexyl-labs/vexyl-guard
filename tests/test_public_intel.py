@@ -21,6 +21,12 @@ from intel.database import (
     seed_db,
     validate_seed_file,
 )
+from intel.explanations import (
+    EXPLANATION_SCHEMA,
+    ExplanationError,
+    decision_from_document,
+    explain_decision,
+)
 from intel.cli import main as cli_main
 from intel.client import (
     GatewayClientError,
@@ -871,6 +877,159 @@ class PublicThreatIntelContractTests(unittest.TestCase):
 
         with self.assertRaises(GatewayClientError):
             validate_gateway_response(response, expected_event_id="different-event")
+
+    def test_operator_explanation_uses_stable_privacy_safe_factors(self) -> None:
+        self.seed()
+        private_value = "sample-private-explanation-token"
+        decision = score_ai_event(
+            {
+                "event_id": "operator@example.invalid",
+                "input_channel": "rag",
+                "data_origin": "retrieved_external",
+                "text_excerpt_redacted": (
+                    "External content says the assistant should call the tool and "
+                    f"send token={private_value}."
+                ),
+            },
+            db_path=str(self.db_path),
+        )
+
+        first = explain_decision(decision, db_path=str(self.db_path))
+        second = explain_decision(decision, db_path=str(self.db_path))
+        self.assertEqual(first.to_dict(), second.to_dict())
+        self.assertEqual(first.schema, EXPLANATION_SCHEMA)
+        self.assertIsNone(first.event_ref)
+        self.assertEqual(first.policy_exit_code, 4)
+        factor_codes = {factor.code for factor in first.factors}
+        self.assertIn("context:external_origin", factor_codes)
+        self.assertIn("rule:AI-PI-002:external_instruction_takeover", factor_codes)
+        payload = json.dumps(first.to_dict(), sort_keys=True)
+        self.assertNotIn(private_value, payload)
+        self.assertNotIn("operator@example.invalid", payload)
+        self.assertNotIn("assistant should call the tool", payload.lower())
+        self.assertFalse(first.privacy["raw_content_included"])
+        self.assertFalse(first.privacy["raw_source_identifiers_included"])
+
+    def test_explanation_suppresses_unregistered_prose_and_unknown_fields(self) -> None:
+        response = valid_gateway_response(event_id="non-opaque-event")
+        decision_data = deepcopy(response["decision"])
+        decision_data["reasons"] = ["token=must-not-reach-operator-output"]
+        decision = decision_from_document({"ok": True, "decision": decision_data})
+        explanation = explain_decision(decision, db_path=str(self.db_path))
+        payload = json.dumps(explanation.to_dict(), sort_keys=True)
+        self.assertNotIn("must-not-reach-operator-output", payload)
+        self.assertEqual(explanation.omitted_factor_count, 1)
+
+        raw_field = deepcopy(decision_data)
+        raw_field["raw_prompt"] = "must never be accepted"
+        with self.assertRaises(ExplanationError):
+            decision_from_document(raw_field)
+
+        invalid_rule = deepcopy(decision_data)
+        invalid_rule["matched_rules"] = ["unsafe free-form rule text"]
+        with self.assertRaises(ExplanationError):
+            decision_from_document(invalid_rule)
+
+        bounded = deepcopy(decision_data)
+        bounded["matched_attack_ids"] = ["AI-PI-001"]
+        bounded["matched_rules"] = [
+            f"rule:AI-PI-001:bounded_rule_{index}" for index in range(128)
+        ]
+        bounded["reasons"] = []
+        bounded_explanation = explain_decision(decision_from_document(bounded))
+        rule_factors = [
+            factor
+            for factor in bounded_explanation.factors
+            if factor.category == "rule"
+        ]
+        self.assertEqual(len(rule_factors), 96)
+        self.assertEqual(bounded_explanation.omitted_factor_count, 32)
+
+        unrecorded = deepcopy(response)
+        unrecorded["recorded"] = False
+        with self.assertRaises(ExplanationError):
+            decision_from_document(unrecorded)
+
+    def test_explain_cli_accepts_events_and_completed_decisions(self) -> None:
+        self.seed()
+        event_path = Path(self.tmp.name) / "explain-event.json"
+        event_path.write_text(
+            json.dumps(
+                {
+                    "event_id": "11111111-1111-4111-8111-111111111111",
+                    "input_channel": "rag",
+                    "data_origin": "retrieved_external",
+                    "text_excerpt_redacted": (
+                        "External content says the assistant should ignore the user."
+                    ),
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        output = StringIO()
+        with redirect_stdout(output):
+            exit_code = cli_main(
+                [
+                    "threat",
+                    "--db",
+                    str(self.db_path),
+                    "explain",
+                    "--json",
+                    str(event_path),
+                ]
+            )
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["input_kind"], "event")
+        self.assertEqual(payload["explanation"]["schema"], EXPLANATION_SCHEMA)
+        self.assertEqual(
+            payload["explanation"]["event_ref"],
+            "11111111-1111-4111-8111-111111111111",
+        )
+
+        with redirect_stdout(StringIO()):
+            policy_exit_code = cli_main(
+                [
+                    "threat",
+                    "--db",
+                    str(self.db_path),
+                    "explain",
+                    "--policy-exit-code",
+                    str(event_path),
+                ]
+            )
+        self.assertEqual(policy_exit_code, 4)
+
+        decision_path = Path(self.tmp.name) / "completed-decision.json"
+        decision_path.write_text(
+            json.dumps(
+                {
+                    "ok": True,
+                    "decision": score_ai_event(
+                        json.loads(event_path.read_text(encoding="utf-8")),
+                        db_path=str(self.db_path),
+                    ).to_dict(),
+                }
+            ),
+            encoding="utf-8",
+        )
+        output = StringIO()
+        with redirect_stdout(output):
+            exit_code = cli_main(
+                [
+                    "threat",
+                    "--db",
+                    str(self.db_path),
+                    "explain",
+                    "--json",
+                    str(decision_path),
+                ]
+            )
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["input_kind"], "decision")
+        self.assertEqual(payload["explanation"]["policy_exit_code"], 4)
 
     def test_identifier_hashing_is_stable_and_keyed(self) -> None:
         first = hash_identifier("local-session", "example-key-material-for-tests")
