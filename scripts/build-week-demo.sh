@@ -3,6 +3,17 @@ set -euo pipefail
 
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+RECORDING_PAUSE_SECONDS=0
+
+if [[ "${1:-}" == "--recording" ]]; then
+  RECORDING_PAUSE_SECONDS="${VEXYL_RECORDING_PAUSE_SECONDS:-6}"
+  shift
+fi
+
+if [[ "$#" -ne 0 ]]; then
+  echo "Usage: $0 [--recording]" >&2
+  exit 2
+fi
 
 if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   echo "Python 3.10 or newer is required." >&2
@@ -23,6 +34,12 @@ VEXYL=("$PYTHON_BIN" "$ROOT_DIR/vexyl" threat --db "$DB_PATH")
 
 heading() {
   printf '\n== %s ==\n' "$1"
+}
+
+recording_pause() {
+  if [[ "$RECORDING_PAUSE_SECONDS" != "0" ]]; then
+    sleep "$RECORDING_PAUSE_SECONDS"
+  fi
 }
 
 decision_summary() {
@@ -152,6 +169,7 @@ print(f"attack patterns: {seeded['attacks']}")
 print(f"detection rules: {seeded['rules']}")
 print(f"mitigations: {seeded['mitigations']}")
 PY
+recording_pause
 
 heading "Search direct and indirect prompt-injection records"
 "${VEXYL[@]}" search prompt --json >"$WORK_DIR/search.json"
@@ -172,12 +190,14 @@ for attack_id in ("AI-PI-001", "AI-PI-002"):
     item = selected[attack_id]
     print(f"{attack_id}: {item['name']} (severity {item['severity']})")
 PY
+recording_pause
 
 heading "Allow a scoped, read-only tool action"
 run_policy_event \
   "$WORK_DIR/allowed-tool.json" \
   "$WORK_DIR/allowed-tool-output.json" \
   0
+recording_pause
 
 heading "Record a redacted, high-risk external-content event"
 run_policy_event \
@@ -185,12 +205,14 @@ run_policy_event \
   "$WORK_DIR/external-content-output.json" \
   4 \
   --record
+recording_pause
 
 heading "Stop the later tool action in the same session"
 run_policy_event \
   "$WORK_DIR/correlated-tool.json" \
   "$WORK_DIR/correlated-tool-output.json" \
   4
+recording_pause
 
 heading "Inspect privacy-safe runtime history"
 "${VEXYL[@]}" runtime-status >"$WORK_DIR/runtime-status.json"
@@ -208,6 +230,7 @@ print(f"derived_event_count: {history['event_count']}")
 print("raw_prompts_returned: false")
 print("raw_tool_arguments_returned: false")
 PY
+recording_pause
 
 heading "Demo complete"
 printf 'The temporary database and redacted sample files are removed automatically.\n'

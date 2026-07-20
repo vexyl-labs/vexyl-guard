@@ -222,11 +222,13 @@ Show the Build Week section of `README.md`, including the four eligible commits.
 
 **0:43-1:48 - Working demo**
 
-Run:
+For recording, run:
 
 ```bash
-./scripts/build-week-demo.sh
+./scripts/build-week-demo.sh --recording
 ```
+
+Recording mode runs the same local judge demo and adds six-second pauses between result sections so the terminal remains synchronized with the narration. The normal judge command remains `./scripts/build-week-demo.sh` with no delay.
 
 Pause briefly on the search, allow, external-content, correlated deny, and privacy-status outputs.
 
