@@ -18,7 +18,7 @@ This document contains the judge path, eligible implementation scope, Devpost co
 
 **Product:** `https://vexyl.dev`
 
-**Release:** `https://github.com/vexyl-labs/vexyl-guard/releases/tag/v0.2.15`
+**Release:** `https://github.com/vexyl-labs/vexyl-guard/releases/tag/v0.2.16`
 
 ## Short Description
 
@@ -52,7 +52,9 @@ Vexyl Guard provides a monitor-first Linux agent and a local AI decision gateway
 - Redacted event models that reject raw prompts, messages, tool arguments, outputs, and unknown context fields.
 - An authenticated Unix-socket gateway with Python and Node.js clients.
 - ASGI/FastAPI and Express guards with shared cross-language conformance fixtures.
+- Privacy-safe decision explanations with bounded factor codes and no raw event content.
 - Signature-verified intelligence updates with anti-rollback and recovery.
+- A deterministic 35-case scoring regression gate covering all 22 public attack-pattern identifiers.
 
 ### How We Built It
 
@@ -81,7 +83,8 @@ A second challenge was making enforcement consistent across languages and framew
 - Shipped authenticated gateway and framework integrations without opening a TCP port.
 - Added bounded operator explanations with stable factor codes and no raw event content.
 - Added signature, revocation, expiry, sequence, atomicity, and recovery checks for intelligence updates.
-- Released the work as v0.2.15 with public source, signed artifacts, APT/DNF packages, CI, and live install canaries.
+- Released the integrated work as v0.2.16 with public source, signed artifacts, APT/DNF packages, CI, and live install canaries.
+- Added an isolated synthetic evaluation gate with zero false positives or false negatives on its curated regression corpus. These fixture results are not presented as real-world efficacy claims.
 
 ### What We Learned
 
@@ -91,7 +94,7 @@ We also learned that authorization context must come from trusted application po
 
 ### What's Next
 
-Next work will expand privacy-preserving evaluation fixtures and operator action runbooks. The public FastAPI, Express, RAG, and MCP examples now run through a shared real-gateway compatibility harness. Enforcement remains opt-in and operator-controlled. Any future action workflow will keep explicit approval, auditability, least privilege, and redaction as hard requirements.
+Next work will expand the evaluation corpus with additional defensive boundary cases and build operator action runbooks. The public FastAPI, Express, RAG, and MCP examples run through a shared real-gateway compatibility harness. Enforcement remains opt-in and operator-controlled. Any future action workflow will keep explicit approval, auditability, least privilege, and redaction as hard requirements.
 
 ## Build Week Eligibility And Evidence
 
@@ -103,14 +106,18 @@ Vexyl Guard existed before the event. The last public commit before the July 13 
 Link public discussions
 ```
 
-The Build Week functionality was added after that baseline. Through v0.2.15, the public diff contains 46 changed files, 7,972 additions, and 176 deletions. Principal implementation commits are:
+The Build Week functionality was added after that baseline. Through evaluation commit `dade7e741cdabeecd09875d9898cf040db155b9b`, after the signed v0.2.16 release, the public diff contains 69 changed files, 14,017 additions, and 178 deletions. Principal implementation commits are:
 
 ```text
 2f203dde438b40d85803fbcf7158edd127956b35  Add stateful AI runtime defense
 17bab48bcfa167229e8b9c5401f60e89a8018ca7  Add authenticated AI decision gateway
 4f501f4a5841a10138f09e5311eda54e5980c030  Add framework AI policy guards
 b4b03f035be07fd0a45d720dc223a519ec69b06b  Add signed AI intelligence updates
-35a0db902d7a0ef1c47572bd819807d45aaefb04  Release Vexyl Guard v0.2.15
+a9211319e7eb90cbec8668663230cf5e056425a9  Harden AI gateway client contracts
+7c349650f3356ed463b8c8c4927eb9800083564a  Add privacy-safe decision explanations
+48bf859fa5f01c9b629dcd3ae27cbc8d4c001d5d  Add runnable AI gateway integration examples
+2dec9aafe50fe2baf55a38dcd5bc7829de770573  Release Vexyl Guard v0.2.16
+dade7e741cdabeecd09875d9898cf040db155b9b  Add AI runtime evaluation gate
 ```
 
 Judges should evaluate that extension. Earlier host-agent, website, account, and package-platform work is context, not claimed Build Week implementation.
@@ -173,6 +180,8 @@ node tests/test_node_gateway_client.mjs
 node tests/test_node_framework_integrations.mjs
 python3 -m tests.run_gateway_conformance
 python3 -m tests.run_example_compatibility
+python3 -m unittest tests/test_ai_runtime_evaluation.py -v
+python3 -m tests.run_ai_runtime_evaluation
 ```
 
 ## Supported Platforms
@@ -238,7 +247,7 @@ Pause briefly on the search, allow, external-content, correlated deny, and priva
 
 **1:48-2:15 - Architecture and delivery**
 
-Show the architecture block in this document, then the v0.2.15 release page without exposing unrelated browser UI.
+Show the architecture block in this document, then the v0.2.16 release page without exposing unrelated browser UI.
 
 > Applications send normalized metadata over an authenticated local Unix socket; Vexyl never opens a TCP listener for this path. Defensive intelligence updates must pass signature, expiry, revocation, monotonic sequence, and shape checks before atomic activation, with last-known-good recovery if needed.
 
@@ -272,7 +281,7 @@ Product:
 https://vexyl.dev
 
 Release:
-https://github.com/vexyl-labs/vexyl-guard/releases/tag/v0.2.15
+https://github.com/vexyl-labs/vexyl-guard/releases/tag/v0.2.16
 
 #OpenAIBuildWeek #Codex #Cybersecurity
 ```

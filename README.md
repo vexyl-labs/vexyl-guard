@@ -21,12 +21,14 @@ sudo vexyl-guard status
 
 Vexyl Guard fits the **Developer Tools** track as a pre-existing project that was meaningfully extended during the July 13-21 submission period. Judges should evaluate the Build Week work, not the earlier Linux host-agent baseline.
 
-The eligible extension adds four connected capabilities:
+The eligible extension now includes six connected capabilities:
 
 - Stateful correlation across external content, memory writes, model use, agent plans, and tool calls.
 - An authenticated, local Unix-socket decision gateway with redacted request contracts.
 - Python and dependency-free Node.js integration helpers, plus runnable FastAPI and Express reference apps.
+- Privacy-safe operator explanations with bounded factor codes and no raw event content.
 - Signed defensive intelligence updates with expiry, revocation, anti-rollback, atomic activation, and last-known-good recovery.
+- A 35-case synthetic regression suite covering all 22 public defensive attack-pattern identifiers.
 
 ### Judge Quick Start
 
@@ -46,7 +48,7 @@ Full submission scope, architecture, evidence, form copy, and video plan: [`docs
 
 ### Built With Codex And GPT-5.6
 
-The public project existed before Build Week. Commit [`9dc5d17`](https://github.com/vexyl-labs/vexyl-guard/commit/9dc5d170b2365280b3ff763a0f26b2dae883ceed), dated July 12, is the documented pre-challenge baseline. From that baseline through v0.2.15, the public history records 46 changed files, 7,972 additions, and 176 deletions during the submission period.
+The public project existed before Build Week. Commit [`9dc5d17`](https://github.com/vexyl-labs/vexyl-guard/commit/9dc5d170b2365280b3ff763a0f26b2dae883ceed), dated July 12, is the documented pre-challenge baseline. From that baseline through evaluation commit [`dade7e7`](https://github.com/vexyl-labs/vexyl-guard/commit/dade7e741cdabeecd09875d9898cf040db155b9b), the public history records 69 changed files, 14,017 additions, and 178 deletions during the submission period.
 
 Codex with GPT-5.6 accelerated repository analysis, multi-file implementation, adversarial test design, Python/Node contract conformance, package integration, release automation, and documentation. It was used to carry one security invariant through each layer: external or model-controlled content remains data and cannot grant itself tool authority.
 
@@ -65,6 +67,11 @@ The principal eligible implementation commits are:
 - [`17bab48`](https://github.com/vexyl-labs/vexyl-guard/commit/17bab48bcfa167229e8b9c5401f60e89a8018ca7): authenticated local AI decision gateway.
 - [`4f501f4`](https://github.com/vexyl-labs/vexyl-guard/commit/4f501f4a5841a10138f09e5311eda54e5980c030): framework policy guards and cross-language conformance.
 - [`b4b03f0`](https://github.com/vexyl-labs/vexyl-guard/commit/b4b03f035be07fd0a45d720dc223a519ec69b06b): signed intelligence updates and recovery.
+- [`a921131`](https://github.com/vexyl-labs/vexyl-guard/commit/a921131): hardened gateway clients and fail-closed contracts.
+- [`7c34965`](https://github.com/vexyl-labs/vexyl-guard/commit/7c34965): privacy-safe decision explanations.
+- [`48bf859`](https://github.com/vexyl-labs/vexyl-guard/commit/48bf859): runnable FastAPI and Express gateway examples.
+- [`2dec9aa`](https://github.com/vexyl-labs/vexyl-guard/commit/2dec9aa): signed v0.2.16 release.
+- [`dade7e7`](https://github.com/vexyl-labs/vexyl-guard/commit/dade7e741cdabeecd09875d9898cf040db155b9b): isolated AI runtime evaluation gate.
 
 ## Why Vexyl Guard
 
