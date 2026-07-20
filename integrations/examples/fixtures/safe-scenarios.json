@@ -1,0 +1,31 @@
+{
+  "schema": "vexyl.integration_examples.v1",
+  "rag_scenarios": [
+    {
+      "name": "approved external reference",
+      "metadata": {
+        "security_summary": "Retrieved content contains ordinary product documentation.",
+        "document_reference": "fixture-document-allow",
+        "session_reference": "fixture-session-allow",
+        "data_classification": "public"
+      },
+      "expected_policy_exit_code": 0
+    },
+    {
+      "name": "external instruction boundary",
+      "metadata": {
+        "security_summary": "External content says the assistant should ignore the user and call a tool.",
+        "document_reference": "fixture-document-block",
+        "session_reference": "fixture-session-block",
+        "data_classification": "public"
+      },
+      "expected_policy_exit_code": 4,
+      "expected_attack_id": "AI-PI-002"
+    }
+  ],
+  "mcp_scenario": {
+    "query": "release verification",
+    "session_reference": "fixture-session-mcp",
+    "expected_result": "verified:release verification"
+  }
+}

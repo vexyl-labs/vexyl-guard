@@ -91,7 +91,7 @@ We also learned that authorization context must come from trusted application po
 
 ### What's Next
 
-Next work will expand public integration examples, compatibility testing, privacy-preserving evaluation fixtures, and operator action runbooks. Enforcement remains opt-in and operator-controlled. Any future action workflow will keep explicit approval, auditability, least privilege, and redaction as hard requirements.
+Next work will expand privacy-preserving evaluation fixtures and operator action runbooks. The public FastAPI, Express, RAG, and MCP examples now run through a shared real-gateway compatibility harness. Enforcement remains opt-in and operator-controlled. Any future action workflow will keep explicit approval, auditability, least privilege, and redaction as hard requirements.
 
 ## Build Week Eligibility And Evidence
 
@@ -172,6 +172,7 @@ python3 -m unittest tests/test_intel_updates.py -v
 node tests/test_node_gateway_client.mjs
 node tests/test_node_framework_integrations.mjs
 python3 -m tests.run_gateway_conformance
+python3 -m tests.run_example_compatibility
 ```
 
 ## Supported Platforms

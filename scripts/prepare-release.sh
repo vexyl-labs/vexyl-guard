@@ -295,6 +295,7 @@ run_checks() {
     node tests/test_node_gateway_client.mjs
     node tests/test_node_framework_integrations.mjs
     python3 -m tests.run_gateway_conformance
+    python3 -m tests.run_example_compatibility
   )
 
   log "building preview packages"
@@ -330,6 +331,8 @@ run_checks() {
     threat --db "$tmp_extract/var/lib/vexyl/ai_threats.sqlite" seed
   PYTHONPATH="$tmp_extract/opt/vexyl" "$tmp_extract/usr/bin/vexyl" \
     threat --db "$tmp_extract/var/lib/vexyl/ai_threats.sqlite" search prompt >/dev/null
+  python3 -m py_compile "$tmp_extract"/usr/share/vexyl/integrations/examples/python/*.py
+  node --check "$tmp_extract/usr/share/vexyl/integrations/examples/node/express-app.mjs"
 }
 
 commit_release() {

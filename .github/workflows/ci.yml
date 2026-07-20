@@ -16,16 +16,26 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: integrations/examples/node/package-lock.json
+
       - name: Install package tools
         run: |
           sudo apt-get update
           sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg rpm
           python3 -m pip install ruff==0.15.22
+          python3 -m pip install -r integrations/examples/python/requirements-test.txt
+          npm ci --prefix integrations/examples/node --ignore-scripts --no-audit --no-fund
+          npm audit --prefix integrations/examples/node --omit=dev --audit-level=high
 
       - name: Check Python quality
         run: |
-          ruff check intel tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/run_gateway_conformance.py
-          ruff format --check intel tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/run_gateway_conformance.py
+          ruff check intel integrations/examples/python tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py tests/run_gateway_conformance.py tests/run_example_compatibility.py
+          ruff format --check intel integrations/examples/python tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py tests/run_gateway_conformance.py tests/run_example_compatibility.py
 
       - name: Check shell syntax
         run: |
@@ -47,20 +57,28 @@ jobs:
         run: |
           node --check integrations/node/vexyl-guard-client.mjs
           node --check integrations/node/vexyl-guard-middleware.mjs
+          node --check integrations/examples/node/rag-boundary.mjs
+          node --check integrations/examples/node/mcp-boundary.mjs
+          node --check integrations/examples/node/express-app.mjs
+          node --check tests/run_node_example_compatibility.mjs
+          node --check tests/test_express_example.mjs
           node tests/test_node_gateway_client.mjs
           node tests/test_node_framework_integrations.mjs
+          node tests/test_express_example.mjs
 
       - name: Run agent fixtures
         run: tests/run-agent-fixtures.sh
 
       - name: Run public AI threat-intel contracts
-        run: python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py -v
+        run: python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py -v
 
       - name: Run Build Week judge demo
         run: scripts/build-week-demo.sh
 
       - name: Run cross-language gateway conformance
-        run: python3 -m tests.run_gateway_conformance
+        run: |
+          python3 -m tests.run_gateway_conformance
+          python3 -m tests.run_example_compatibility
 
       - name: Build packages
         run: packaging/build-packages.sh --format all

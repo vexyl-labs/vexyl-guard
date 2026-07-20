@@ -28,7 +28,7 @@ for package in "$@"; do
       ;;
   esac
 
-  printf '%s\n' "$contents" | grep -En 'vexyl_guard_ai_threat_schema\.sql|vexyl_guard_ai_threats_seed\.jsonl|cloudflare/|docs/research/|codex_vexyl_guard_ai_threat_brief|\.env|\.dev\.vars|private\.pem|private\.der' && {
+  printf '%s\n' "$contents" | grep -En 'vexyl_guard_ai_threat_schema\.sql|vexyl_guard_ai_threats_seed\.jsonl|cloudflare/|docs/research/|codex_vexyl_guard_ai_threat_brief|node_modules/|__pycache__/|\.env|\.dev\.vars|private\.pem|private\.der' && {
     printf 'Package includes private or intentionally excluded files: %s\n' "$package" >&2
     exit 1
   }
@@ -46,6 +46,18 @@ for package in "$@"; do
     "/opt/vexyl/intel/updates.py" \
     "/usr/share/vexyl/integrations/node/vexyl-guard-client.mjs" \
     "/usr/share/vexyl/integrations/node/vexyl-guard-middleware.mjs" \
+    "/usr/share/vexyl/integrations/examples/README.md" \
+    "/usr/share/vexyl/integrations/examples/fixtures/safe-scenarios.json" \
+    "/usr/share/vexyl/integrations/examples/node/express-app.mjs" \
+    "/usr/share/vexyl/integrations/examples/node/mcp-boundary.mjs" \
+    "/usr/share/vexyl/integrations/examples/node/package.json" \
+    "/usr/share/vexyl/integrations/examples/node/package-lock.json" \
+    "/usr/share/vexyl/integrations/examples/node/rag-boundary.mjs" \
+    "/usr/share/vexyl/integrations/examples/python/fastapi_app.py" \
+    "/usr/share/vexyl/integrations/examples/python/mcp_boundary.py" \
+    "/usr/share/vexyl/integrations/examples/python/rag_boundary.py" \
+    "/usr/share/vexyl/integrations/examples/python/requirements.txt" \
+    "/usr/share/vexyl/integrations/examples/python/requirements-test.txt" \
     "/etc/vexyl/guard.conf" \
     "/etc/vexyl/ai-gateway.conf" \
     "/etc/vexyl/intel-update.conf" \

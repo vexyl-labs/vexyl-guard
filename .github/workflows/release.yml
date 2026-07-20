@@ -35,10 +35,20 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: integrations/examples/node/package-lock.json
+
       - name: Install package tools
         run: |
           sudo apt-get update
           sudo apt-get install -y apt-utils createrepo-c dpkg-dev file gnupg openssl ripgrep rpm
+          python3 -m pip install -r integrations/examples/python/requirements-test.txt
+          npm ci --prefix integrations/examples/node --ignore-scripts --no-audit --no-fund
+          npm audit --prefix integrations/examples/node --omit=dev --audit-level=high
 
       - name: Resolve release metadata
         id: meta
@@ -97,10 +107,12 @@ jobs:
 
       - name: Run framework integration contracts
         run: |
-          python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py -v
+          python3 -m unittest tests/test_public_intel.py tests/test_framework_integrations.py tests/test_intel_updates.py tests/test_example_apps.py -v
           node tests/test_node_gateway_client.mjs
           node tests/test_node_framework_integrations.mjs
+          node tests/test_express_example.mjs
           python3 -m tests.run_gateway_conformance
+          python3 -m tests.run_example_compatibility
 
       - name: Build packages
         run: packaging/build-packages.sh --format all --version "${{ steps.meta.outputs.version }}"

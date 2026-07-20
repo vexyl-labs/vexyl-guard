@@ -82,6 +82,10 @@ stage_tree() {
   install -d -m 0755 "$dest/usr/share/doc/vexyl-guard"
   install -d -m 0755 "$dest/usr/lib/vexyl"
   install -d -m 0755 "$dest/usr/share/vexyl/integrations/node"
+  install -d -m 0755 \
+    "$dest/usr/share/vexyl/integrations/examples/fixtures" \
+    "$dest/usr/share/vexyl/integrations/examples/node" \
+    "$dest/usr/share/vexyl/integrations/examples/python"
   install -d -m 0755 "$dest/opt/vexyl/intel"
   install -d -m 0755 "$dest/$(dirname "$agent_path")" "$dest/$(dirname "$cli_path")"
   install -d -m 0755 "$dest/$(dirname "$service_path")"
@@ -95,6 +99,19 @@ stage_tree() {
   install -m 0644 "$ROOT_DIR"/intel/*.py "$dest/opt/vexyl/intel/"
   install -m 0644 "$ROOT_DIR"/integrations/node/*.mjs \
     "$dest/usr/share/vexyl/integrations/node/"
+  install -m 0644 "$ROOT_DIR/integrations/examples/README.md" \
+    "$dest/usr/share/vexyl/integrations/examples/README.md"
+  install -m 0644 "$ROOT_DIR"/integrations/examples/fixtures/*.json \
+    "$dest/usr/share/vexyl/integrations/examples/fixtures/"
+  install -m 0644 "$ROOT_DIR"/integrations/examples/node/*.mjs \
+    "$dest/usr/share/vexyl/integrations/examples/node/"
+  install -m 0644 \
+    "$ROOT_DIR/integrations/examples/node/package.json" \
+    "$ROOT_DIR/integrations/examples/node/package-lock.json" \
+    "$dest/usr/share/vexyl/integrations/examples/node/"
+  install -m 0644 "$ROOT_DIR"/integrations/examples/python/*.py \
+    "$ROOT_DIR"/integrations/examples/python/*.txt \
+    "$dest/usr/share/vexyl/integrations/examples/python/"
 
   install -m 0640 "$ROOT_DIR/config/vexyl-guard.conf.example" "$dest/etc/vexyl/guard.conf"
   install -m 0640 "$ROOT_DIR/config/vexyl-ai-gateway.conf.example" "$dest/etc/vexyl/ai-gateway.conf"
@@ -448,6 +465,22 @@ fi
 %dir /usr/share/vexyl/integrations/node
 /usr/share/vexyl/integrations/node/vexyl-guard-client.mjs
 /usr/share/vexyl/integrations/node/vexyl-guard-middleware.mjs
+%dir /usr/share/vexyl/integrations/examples
+/usr/share/vexyl/integrations/examples/README.md
+%dir /usr/share/vexyl/integrations/examples/fixtures
+/usr/share/vexyl/integrations/examples/fixtures/safe-scenarios.json
+%dir /usr/share/vexyl/integrations/examples/node
+/usr/share/vexyl/integrations/examples/node/express-app.mjs
+/usr/share/vexyl/integrations/examples/node/mcp-boundary.mjs
+/usr/share/vexyl/integrations/examples/node/package.json
+/usr/share/vexyl/integrations/examples/node/package-lock.json
+/usr/share/vexyl/integrations/examples/node/rag-boundary.mjs
+%dir /usr/share/vexyl/integrations/examples/python
+/usr/share/vexyl/integrations/examples/python/fastapi_app.py
+/usr/share/vexyl/integrations/examples/python/mcp_boundary.py
+/usr/share/vexyl/integrations/examples/python/rag_boundary.py
+/usr/share/vexyl/integrations/examples/python/requirements.txt
+/usr/share/vexyl/integrations/examples/python/requirements-test.txt
 %dir /opt/vexyl
 %dir /opt/vexyl/intel
 /opt/vexyl/intel/*.py

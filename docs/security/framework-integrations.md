@@ -133,19 +133,31 @@ Provider selection, model selection, budgets, and cost estimates must come from 
 
 Equivalent `MCPToolGuard` and `ModelGatewayGuard` classes are exported by `vexyl-guard-middleware.mjs` for Express and other Node.js applications.
 
+## Runnable Reference Apps
+
+[`integrations/examples`](../../integrations/examples) contains small FastAPI and Express applications plus reusable Python and Node.js RAG and MCP boundaries. The examples use fixed synthetic metadata and never parse or forward HTTP request bodies. Local document and session references are converted to keyed hashes before an event reaches the gateway.
+
+The examples bind to loopback, keep authorization policy in application-owned constants, reject malformed MCP queries, and install bounded policy-error handling. They are intended to be copied and adapted at an existing application boundary, not deployed as public gateway proxies.
+
+Setup commands, package-installed paths, and safe production adaptation notes are in the [example README](../../integrations/examples/README.md).
+
 ## Conformance
 
 The shared conformance fixtures are evaluated through the real Python gateway by both clients:
 
 ```bash
 python3 -m tests.run_gateway_conformance
+python3 -m tests.run_example_compatibility
 ```
 
-The harness verifies matching policy outcomes for authorized read-only tools, unauthorized actions, retrieved instruction takeover, model identity drift, and disabled runtime oversight. Client tests also verify that malformed, unrecorded, mismatched, or downgraded decision responses fail closed and that nested request context cannot carry undeclared raw data. Fixtures contain defensive summaries only, not full jailbreak payloads, exploit instructions, or malware code.
+The harnesses verify matching policy outcomes for authorized read-only tools, unauthorized actions, retrieved instruction takeover, model identity drift, disabled runtime oversight, and the packaged RAG/MCP boundaries. Client tests also verify that malformed, unrecorded, mismatched, or downgraded decision responses fail closed and that nested request context cannot carry undeclared raw data. Fixtures contain defensive summaries only, not full jailbreak payloads, exploit instructions, or malware code.
 
 Run all framework contracts:
 
 ```bash
 python3 -m unittest tests/test_framework_integrations.py -v
 node tests/test_node_framework_integrations.mjs
+# After installing integrations/examples dependencies:
+python3 -m unittest tests/test_example_apps.py -v
+node tests/test_express_example.mjs
 ```

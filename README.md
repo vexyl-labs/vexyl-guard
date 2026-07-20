@@ -25,7 +25,7 @@ The eligible extension adds four connected capabilities:
 
 - Stateful correlation across external content, memory writes, model use, agent plans, and tool calls.
 - An authenticated, local Unix-socket decision gateway with redacted request contracts.
-- Python and dependency-free Node.js integration helpers, including ASGI/FastAPI and Express policy guards.
+- Python and dependency-free Node.js integration helpers, plus runnable FastAPI and Express reference apps.
 - Signed defensive intelligence updates with expiry, revocation, anti-rollback, atomic activation, and last-known-good recovery.
 
 ### Judge Quick Start
@@ -40,7 +40,7 @@ cd vexyl-guard
 
 The demo searches the public prompt-injection baseline, allows an explicitly scoped read-only tool action, records a redacted high-risk external-content event, and then blocks the same otherwise-authorized tool action when it follows that event in the same session. It finishes by returning history counts without raw prompts or tool arguments.
 
-Supported production platforms are Linux hosts using Debian/Ubuntu or Fedora/RHEL-compatible packages. The source demo and tests require Python 3.10 or newer on Linux. Node.js 20 or newer is required only for the Node integration tests.
+Supported production platforms are Linux hosts using Debian/Ubuntu or Fedora/RHEL-compatible packages. The source demo and tests require Python 3.10 or newer on Linux. Node.js 20 or newer is required for the Node integration tests and Express reference app.
 
 Full submission scope, architecture, evidence, form copy, and video plan: [`docs/build-week-submission.md`](docs/build-week-submission.md)
 
@@ -99,7 +99,7 @@ Vexyl Guard complements patching, access control, backups, firewall policy, and 
 
 - [`agent/vexyl-guard.sh`](agent/vexyl-guard.sh): Bash host agent for Linux servers.
 - [`intel/`](intel): public runtime interfaces and redaction helpers for local defensive scoring. Active intelligence records remain private.
-- [`integrations/`](integrations): dependency-free Node.js clients and framework guards for the authenticated local AI decision gateway.
+- [`integrations/`](integrations): Python and Node.js boundaries, framework guards, and runnable FastAPI/Express reference apps for the authenticated local AI decision gateway.
 - [`vexyl`](vexyl): Python CLI entry point for local threat-intelligence commands.
 - [`config/vexyl-guard.conf.example`](config/vexyl-guard.conf.example): monitor-first agent configuration.
 - [`packaging/`](packaging): Debian/RPM builds, signed repository tooling, and systemd service.
@@ -305,6 +305,8 @@ Gateway setup and examples: [`docs/security/ai-gateway-integration.md`](docs/sec
 
 Framework and middleware examples: [`docs/security/framework-integrations.md`](docs/security/framework-integrations.md)
 
+Runnable reference apps and safe fixtures: [`integrations/examples/README.md`](integrations/examples/README.md)
+
 ### Signed Intelligence Updates
 
 Packages include an opt-in updater for Vexyl's defensive AI threat records. It accepts only authenticated HTTPS responses that also pass local RSA signature, revocation, expiry, sequence, record-hash, and defensive-shape checks. Updates replace intelligence tables atomically and preserve redacted runtime history.
@@ -329,6 +331,10 @@ python3 -m unittest tests/test_framework_integrations.py -v
 python3 -m unittest tests/test_intel_updates.py -v
 node tests/test_node_framework_integrations.mjs
 python3 -m tests.run_gateway_conformance
+python3 -m tests.run_example_compatibility
+# After installing the optional example dependencies:
+python3 -m unittest tests/test_example_apps.py -v
+node tests/test_express_example.mjs
 ```
 
 The GitHub Actions workflow runs the same safe fixture and public AI threat-intelligence contract checks.
