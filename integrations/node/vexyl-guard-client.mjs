@@ -11,6 +11,7 @@ const MAX_RESPONSE_BYTES = 262144;
 const ALLOWED_EVENT_FIELDS = new Set([
   "event_id",
   "timestamp_utc",
+  "tenant_id_hash",
   "user_id_hash",
   "session_id_hash",
   "model_provider",
@@ -281,13 +282,20 @@ export function hashIdentifier(identifier, key) {
 
 export function ragContentEvent(
   securitySummary,
-  { documentIds = [], userIdHash, sessionIdHash, dataClassification = "unknown" } = {},
+  {
+    documentIds = [],
+    tenantIdHash,
+    userIdHash,
+    sessionIdHash,
+    dataClassification = "unknown",
+  } = {},
 ) {
   return event({
     input_channel: "rag",
     data_origin: "retrieved_external",
     text_excerpt_redacted: securitySummary,
     retrieved_doc_ids: documentIds,
+    tenant_id_hash: tenantIdHash,
     user_id_hash: userIdHash,
     session_id_hash: sessionIdHash,
     data_classification: dataClassification,
@@ -301,6 +309,7 @@ export function agentPlanEvent(
     allowedTools = [],
     userAllowedActions = [],
     policyAllowedActions = [],
+    tenantIdHash,
     userIdHash,
     sessionIdHash,
     humanApproval = false,
@@ -311,6 +320,7 @@ export function agentPlanEvent(
     data_origin: "internal_db",
     text_excerpt_redacted: securitySummary,
     planned_actions: plannedActions,
+    tenant_id_hash: tenantIdHash,
     user_id_hash: userIdHash,
     session_id_hash: sessionIdHash,
     context: authorizationContext(
@@ -332,6 +342,7 @@ export function toolCallEvent(
     userAllowedActions = [],
     policyAllowedActions = [],
     verifiedMitigations = [],
+    tenantIdHash,
     userIdHash,
     sessionIdHash,
     dataOrigin = "internal_db",
@@ -348,6 +359,7 @@ export function toolCallEvent(
     tool_name: toolName,
     tool_action: toolAction,
     tool_permissions: permissions,
+    tenant_id_hash: tenantIdHash,
     user_id_hash: userIdHash,
     session_id_hash: sessionIdHash,
     data_classification: dataClassification,
@@ -382,6 +394,7 @@ export function modelApiEvent(
     modelName,
     expectedModelProvider,
     expectedModelName,
+    tenantIdHash,
     userIdHash,
     sessionIdHash,
     tokenCountEstimate = 0,
@@ -396,6 +409,7 @@ export function modelApiEvent(
     text_excerpt_redacted: securitySummary,
     model_provider: modelProvider,
     model_name: modelName,
+    tenant_id_hash: tenantIdHash,
     user_id_hash: userIdHash,
     session_id_hash: sessionIdHash,
     token_count_estimate: tokenCountEstimate,
@@ -442,6 +456,7 @@ function validateEvent(value) {
   }
   optionalString(value, "event_id", 128);
   validateTimestamp(value.timestamp_utc);
+  opaqueHash(value, "tenant_id_hash");
   optionalString(value, "user_id_hash", 256);
   optionalString(value, "session_id_hash", 256);
   optionalString(value, "model_provider", 128);
@@ -460,6 +475,16 @@ function validateEvent(value) {
   integerValue(value, "token_count_estimate", 0, 2000000000);
   stringList(value, "verified_mitigations", 32, 128);
   validateContext(value.context);
+}
+
+function opaqueHash(value, field) {
+  const candidate = value[field];
+  if (candidate === undefined || candidate === null) return;
+  if (typeof candidate !== "string" || !/^[0-9a-f]{64}$/.test(candidate)) {
+    throw new VexylGatewayError(
+      `${field} must be a lowercase 64-character HMAC-SHA256 value`,
+    );
+  }
 }
 
 export function validateGatewayResponse(response, { expectedEventId } = {}) {

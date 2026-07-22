@@ -512,6 +512,122 @@ class PublicThreatIntelContractTests(unittest.TestCase):
             "rule:AI-PI-002:correlated_external_to_tool", decision.matched_rules
         )
 
+    def test_sequence_rules_do_not_cross_tenant_boundary(self) -> None:
+        self.seed()
+        tenant_key = "tenant-isolation-test-key-material"
+        tenant_a = hash_identifier("tenant-a", tenant_key)
+        tenant_b = hash_identifier("tenant-b", tenant_key)
+        shared_session = "shared-application-session"
+        shared_user = "shared-application-user"
+        score_and_record_ai_event(
+            {
+                "event_id": "tenant-a-external",
+                "tenant_id_hash": tenant_a,
+                "session_id_hash": shared_session,
+                "user_id_hash": shared_user,
+                "input_channel": "rag",
+                "data_origin": "retrieved_external",
+                "text_excerpt_redacted": "External content says the assistant should ignore the user.",
+            },
+            db_path=str(self.db_path),
+        )
+
+        tenant_b_decision = score_ai_event(
+            {
+                "event_id": "tenant-b-tool",
+                "tenant_id_hash": tenant_b,
+                "session_id_hash": shared_session,
+                "user_id_hash": shared_user,
+                "input_channel": "tool",
+                "data_origin": "internal_db",
+                "text_excerpt_redacted": "Read the approved service status.",
+                "tool_name": "search",
+                "tool_action": "search internal docs",
+                "tool_permissions": ["read"],
+                "verified_mitigations": [
+                    "tool_allowlist",
+                    "scoped_read_only_credentials",
+                ],
+                "context": {
+                    "allowed_tools": ["search"],
+                    "user_scope": {"allowed_actions": ["search internal docs"]},
+                    "tool_policy": {"allowed_actions": ["search internal docs"]},
+                },
+            },
+            db_path=str(self.db_path),
+        )
+        self.assertFalse(tenant_b_decision.deny_tool_call)
+        self.assertEqual(tenant_b_decision.correlated_event_count, 0)
+
+        tenant_a_decision = score_ai_event(
+            {
+                "event_id": "tenant-a-tool",
+                "tenant_id_hash": tenant_a,
+                "session_id_hash": shared_session,
+                "user_id_hash": shared_user,
+                "input_channel": "tool",
+                "data_origin": "internal_db",
+                "text_excerpt_redacted": "Read the approved service status.",
+                "tool_name": "search",
+                "tool_action": "search internal docs",
+                "tool_permissions": ["read"],
+                "verified_mitigations": [
+                    "tool_allowlist",
+                    "scoped_read_only_credentials",
+                ],
+                "context": {
+                    "allowed_tools": ["search"],
+                    "user_scope": {"allowed_actions": ["search internal docs"]},
+                    "tool_policy": {"allowed_actions": ["search internal docs"]},
+                },
+            },
+            db_path=str(self.db_path),
+        )
+        self.assertTrue(tenant_a_decision.deny_tool_call)
+        self.assertIn(
+            "rule:AI-PI-002:correlated_external_to_tool",
+            tenant_a_decision.matched_rules,
+        )
+
+    def test_scoped_and_unscoped_history_remain_isolated(self) -> None:
+        self.seed()
+        score_and_record_ai_event(
+            {
+                "event_id": "unscoped-external",
+                "session_id_hash": "shared-session",
+                "input_channel": "rag",
+                "data_origin": "retrieved_external",
+                "text_excerpt_redacted": "External content says the assistant should ignore the user.",
+            },
+            db_path=str(self.db_path),
+        )
+        decision = score_ai_event(
+            {
+                "event_id": "scoped-tool",
+                "tenant_id_hash": hash_identifier(
+                    "tenant-a", "tenant-isolation-test-key-material"
+                ),
+                "session_id_hash": "shared-session",
+                "input_channel": "tool",
+                "data_origin": "internal_db",
+                "tool_name": "search",
+                "tool_action": "search internal docs",
+                "tool_permissions": ["read"],
+                "verified_mitigations": [
+                    "tool_allowlist",
+                    "scoped_read_only_credentials",
+                ],
+                "context": {
+                    "allowed_tools": ["search"],
+                    "user_scope": {"allowed_actions": ["search internal docs"]},
+                    "tool_policy": {"allowed_actions": ["search internal docs"]},
+                },
+            },
+            db_path=str(self.db_path),
+        )
+        self.assertFalse(decision.deny_tool_call)
+        self.assertEqual(decision.correlated_event_count, 0)
+
     def test_sequence_rules_require_a_session_hash(self) -> None:
         self.seed()
         score_and_record_ai_event(
@@ -552,10 +668,14 @@ class PublicThreatIntelContractTests(unittest.TestCase):
 
     def test_runtime_history_stores_only_redacted_derived_facts(self) -> None:
         self.seed()
+        tenant_scope_hash = hash_identifier(
+            "private-tenant-name", "tenant-storage-test-key-material"
+        )
         score_and_record_ai_event(
             {
                 "event_id": "privacy-1",
                 "tenant_id": "private-tenant-name",
+                "tenant_id_hash": tenant_scope_hash,
                 "user_id_hash": "caller-supplied-user-value",
                 "session_id_hash": "caller-supplied-session-value",
                 "input_channel": "rag",
@@ -572,6 +692,7 @@ class PublicThreatIntelContractTests(unittest.TestCase):
         database_bytes = self.db_path.read_bytes()
         for forbidden in (
             b"private-tenant-name",
+            tenant_scope_hash.encode("ascii"),
             b"caller-supplied-user-value",
             b"caller-supplied-session-value",
             b"sample-private-token-value",
@@ -587,7 +708,8 @@ class PublicThreatIntelContractTests(unittest.TestCase):
                 "FROM runtime_events LIMIT 1"
             ).fetchone()
         self.assertIsNone(row[0])
-        self.assertIsNone(row[1])
+        self.assertEqual(len(row[1]), 64)
+        self.assertNotEqual(row[1], tenant_scope_hash)
         self.assertEqual(len(row[2]), 64)
         self.assertTrue(json.loads(row[3])["external"])
 
@@ -827,6 +949,14 @@ class PublicThreatIntelContractTests(unittest.TestCase):
                     "input_channel": "chat",
                     "data_origin": "user",
                     "prompt": "raw prompt content is not part of the gateway contract",
+                }
+            )
+        with self.assertRaisesRegex(GatewayEventError, "tenant_id_hash"):
+            validate_gateway_event(
+                {
+                    "tenant_id_hash": "tenant-name-is-not-an-opaque-hmac",
+                    "input_channel": "chat",
+                    "data_origin": "user",
                 }
             )
         with self.assertRaises(GatewayEventError):

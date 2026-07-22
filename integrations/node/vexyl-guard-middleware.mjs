@@ -147,6 +147,7 @@ export class MCPToolGuard {
   authorize(
     securitySummary,
     {
+      tenantIdHash,
       userIdHash,
       sessionIdHash,
       dataOrigin = "internal_db",
@@ -165,6 +166,7 @@ export class MCPToolGuard {
       userAllowedActions: this.userAllowedActions,
       policyAllowedActions: this.policyAllowedActions,
       verifiedMitigations: this.verifiedMitigations,
+      tenantIdHash,
       userIdHash,
       sessionIdHash,
       dataOrigin,
@@ -199,6 +201,7 @@ export class ModelGatewayGuard {
     {
       modelProvider,
       modelName,
+      tenantIdHash,
       userIdHash,
       sessionIdHash,
       tokenCountEstimate = 0,
@@ -210,6 +213,7 @@ export class ModelGatewayGuard {
       modelName,
       expectedModelProvider: this.expectedModelProvider,
       expectedModelName: this.expectedModelName,
+      tenantIdHash,
       userIdHash,
       sessionIdHash,
       tokenCountEstimate,

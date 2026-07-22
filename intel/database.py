@@ -675,8 +675,7 @@ def migrate_runtime_event_schema(conn: sqlite3.Connection) -> None:
     )
 
     conn.execute(
-        "UPDATE runtime_events SET tenant_id = NULL, tenant_id_hash = NULL "
-        "WHERE tenant_id IS NOT NULL OR tenant_id_hash IS NOT NULL"
+        "UPDATE runtime_events SET tenant_id = NULL WHERE tenant_id IS NOT NULL"
     )
 
     conn.execute(
@@ -689,6 +688,14 @@ def migrate_runtime_event_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_events_user_recorded "
         "ON runtime_events(user_id_hash, recorded_at_utc DESC)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_events_tenant_session_recorded "
+        "ON runtime_events(tenant_id_hash, session_id_hash, recorded_at_utc DESC)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_events_tenant_user_recorded "
+        "ON runtime_events(tenant_id_hash, user_id_hash, recorded_at_utc DESC)"
     )
 
 
@@ -1297,6 +1304,11 @@ def load_runtime_history(
     if not path.exists():
         return {"scope": None, "window_seconds": window_seconds, "events": []}
 
+    tenant_id_hash = (
+        _privacy_fingerprint(event.get("tenant_id_hash"), "tenant")
+        if event.get("tenant_id_hash")
+        else None
+    )
     session_id_hash = (
         _privacy_fingerprint(event.get("session_id_hash"), "session")
         if event.get("session_id_hash")
@@ -1307,15 +1319,19 @@ def load_runtime_history(
         if event.get("user_id_hash")
         else None
     )
-    clauses: list[str] = []
+    identity_clauses: list[str] = []
     params: list[Any] = []
+    tenant_clause = "tenant_id_hash IS NULL"
+    if tenant_id_hash:
+        tenant_clause = "tenant_id_hash = ?"
+        params.append(tenant_id_hash)
     if session_id_hash:
-        clauses.append("session_id_hash = ?")
+        identity_clauses.append("session_id_hash = ?")
         params.append(session_id_hash)
     if user_id_hash:
-        clauses.append("user_id_hash = ?")
+        identity_clauses.append("user_id_hash = ?")
         params.append(user_id_hash)
-    if not clauses:
+    if not identity_clauses:
         return {"scope": None, "window_seconds": window_seconds, "events": []}
 
     scope = "session" if session_id_hash else "user"
@@ -1327,14 +1343,15 @@ def load_runtime_history(
         with connect(path) as conn:
             migrate_runtime_event_schema(conn)
             rows = conn.execute(
-                f"""SELECT event_id, recorded_at_utc, user_id_hash, session_id_hash,
+                f"""SELECT event_id, recorded_at_utc, tenant_id_hash, user_id_hash, session_id_hash,
                            model_provider, model_name, input_channel, data_origin,
                            tool_name, tool_action, data_classification, risk_score,
                            content_fingerprint, token_count_estimate, cost_estimate,
                            event_flags_json
-                      FROM runtime_events
+                     FROM runtime_events
                      WHERE datetime(recorded_at_utc) >= datetime('now', ?)
-                       AND ({" OR ".join(clauses)})
+                       AND {tenant_clause}
+                       AND ({" OR ".join(identity_clauses)})
                      ORDER BY datetime(recorded_at_utc) DESC
                      LIMIT ?""",
                 (cutoff, *params, bounded_limit),
@@ -1384,7 +1401,9 @@ def record_runtime_event(
             (
                 _privacy_fingerprint(event_identifier, "event"),
                 _safe_timestamp(event.get("timestamp_utc")),
-                None,
+                _privacy_fingerprint(event.get("tenant_id_hash"), "tenant")
+                if event.get("tenant_id_hash")
+                else None,
                 _privacy_fingerprint(event.get("user_id_hash"), "user")
                 if event.get("user_id_hash")
                 else None,

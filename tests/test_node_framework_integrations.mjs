@@ -141,6 +141,7 @@ assert.equal(response.payload.policy_exit_code, 3);
 assert.equal(response.payload.matched_rules, undefined);
 
 const mcpClient = new FakeGatewayClient();
+const tenantIdHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const mcpGuard = new MCPToolGuard(new VexylRequestGuard(mcpClient), {
   serverName: "docs",
   toolName: "search",
@@ -150,8 +151,9 @@ const mcpGuard = new MCPToolGuard(new VexylRequestGuard(mcpClient), {
   policyAllowedActions: ["search approved documentation"],
   verifiedMitigations: ["tool_allowlist", "scoped_read_only_credentials"],
 });
-await mcpGuard.authorize("Search approved internal documentation.");
+await mcpGuard.authorize("Search approved internal documentation.", { tenantIdHash });
 assert.equal(mcpClient.events[0].tool_name, "mcp:docs:search");
+assert.equal(mcpClient.events[0].tenant_id_hash, tenantIdHash);
 assert.deepEqual(mcpClient.events[0].context.allowed_tools, ["mcp:docs:search"]);
 
 const modelClient = new FakeGatewayClient();

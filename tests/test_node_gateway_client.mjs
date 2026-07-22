@@ -70,12 +70,14 @@ await new Promise((resolve, reject) => {
 try {
   const firstHash = hashIdentifier("local-session", "node-client-test-key-material");
   const secondHash = hashIdentifier("local-session", "node-client-test-key-material");
+  const tenantHash = hashIdentifier("local-tenant", "node-client-test-key-material");
   assert.equal(firstHash, secondHash);
   assert.equal(firstHash.length, 64);
 
   const client = new VexylGatewayClient({ socketPath, token, timeoutMs: 1000 });
   const event = ragContentEvent("External content contains instruction-like text.", {
     documentIds: ["opaque-document-hash"],
+    tenantIdHash: tenantHash,
     sessionIdHash: firstHash,
   });
   const decision = await client.score(event);
@@ -85,6 +87,14 @@ try {
   const { event_id: receivedEventId, ...receivedEvent } = receivedEnvelope.event;
   assert.ok(receivedEventId.length > 0);
   assert.deepEqual(receivedEvent, event);
+  assert.equal(receivedEvent.tenant_id_hash, tenantHash);
+  assert.throws(
+    () =>
+      ragContentEvent("Bounded summary.", {
+        tenantIdHash: "raw-tenant-name",
+      }),
+    VexylGatewayError,
+  );
 
   const contractResponse = validResponse("expected-event-id");
   assert.equal(

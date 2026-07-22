@@ -159,6 +159,7 @@ class RuntimeAIEvent:
     event_id: str = field(default_factory=lambda: str(uuid4()))
     timestamp_utc: str = field(default_factory=utc_now_iso)
     tenant_id: str | None = None
+    tenant_id_hash: str | None = None
     user_id_hash: str | None = None
     session_id_hash: str | None = None
     model_provider: str | None = None
@@ -187,6 +188,7 @@ class RuntimeAIEvent:
                 data.get("timestamp_utc") or data.get("event_time_utc") or utc_now_iso()
             ),
             tenant_id=data.get("tenant_id"),
+            tenant_id_hash=data.get("tenant_id_hash"),
             user_id_hash=data.get("user_id_hash"),
             session_id_hash=data.get("session_id_hash"),
             model_provider=data.get("model_provider"),

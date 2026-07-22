@@ -603,6 +603,7 @@ def scan_prompt(
     ctx = dict(context or {})
     event = RuntimeAIEvent(
         tenant_id=optional_string(ctx.get("tenant_id")),
+        tenant_id_hash=optional_string(ctx.get("tenant_id_hash")),
         user_id_hash=optional_string(ctx.get("user_id_hash")),
         session_id_hash=optional_string(ctx.get("session_id_hash")),
         model_provider=optional_string(ctx.get("model_provider")),
@@ -628,6 +629,7 @@ def scan_external_content(
         verified_mitigations.append("signed_trusted_corpus")
     event = RuntimeAIEvent(
         tenant_id=optional_string(metadata.get("tenant_id")),
+        tenant_id_hash=optional_string(metadata.get("tenant_id_hash")),
         user_id_hash=optional_string(metadata.get("user_id_hash")),
         session_id_hash=optional_string(metadata.get("session_id_hash")),
         model_provider=optional_string(metadata.get("model_provider")),
@@ -664,6 +666,7 @@ def evaluate_agent_plan(
                     "verified_mitigations",
                     "human_approval",
                     "tenant_id",
+                    "tenant_id_hash",
                     "user_id_hash",
                     "session_id_hash",
                     "model_provider",
@@ -676,6 +679,7 @@ def evaluate_agent_plan(
         )
     event = RuntimeAIEvent(
         tenant_id=optional_string(context.get("tenant_id")),
+        tenant_id_hash=optional_string(context.get("tenant_id_hash")),
         user_id_hash=optional_string(context.get("user_id_hash")),
         session_id_hash=optional_string(context.get("session_id_hash")),
         model_provider=optional_string(context.get("model_provider")),
@@ -698,6 +702,7 @@ def evaluate_tool_call(
     args = tool_call.get("args") if isinstance(tool_call.get("args"), dict) else {}
     event = RuntimeAIEvent(
         tenant_id=optional_string(context.get("tenant_id")),
+        tenant_id_hash=optional_string(context.get("tenant_id_hash")),
         user_id_hash=optional_string(context.get("user_id_hash")),
         session_id_hash=optional_string(context.get("session_id_hash")),
         model_provider=optional_string(context.get("model_provider")),

@@ -40,6 +40,7 @@ Submit an envelope to `POST /v1/decisions`:
 {
   "schema": "vexyl.ai_event.v1",
   "event": {
+    "tenant_id_hash": "89b92958d05fc449d911d1d517ff3ae6839a73348aac6fec44981be08554e95a",
     "session_id_hash": "application-generated-opaque-hash",
     "input_channel": "tool",
     "data_origin": "internal_db",
@@ -71,6 +72,12 @@ Policy decisions use HTTP 200. Authentication, schema, size, and local scoring f
 
 The packaged Python and Node.js clients validate both sides of this contract. Requests reject unknown nested context, raw prompt/tool fields, invalid enums, and out-of-range values before transmission. Responses must use the complete v1 decision shape, confirm that correlation state was recorded, match the submitted event ID, and keep score, suggested action, tool denial, and policy exit code consistent. Unknown response fields and contradictory or downgraded decisions raise a client error instead of becoming an allow result.
 
+### Tenant Isolation
+
+Multi-tenant applications should derive `tenant_id_hash` with `hash_identifier(internal_tenant_reference, application_hashing_key)` and include the same value at every Vexyl boundary for that tenant. The field accepts only a lowercase 64-character HMAC-SHA256 value. Do not send a tenant name, customer ID, domain, or billing identifier.
+
+Vexyl Guard hashes the supplied value again before local storage. Correlation first matches tenant scope and only then evaluates session or user history. Events from different tenant hashes never share correlation state, even when their session or user hashes are identical. Events without tenant scope remain supported and are isolated from scoped history.
+
 ## Python Integration
 
 Install the source package in the application virtual environment:
@@ -88,6 +95,7 @@ from intel.client import GatewayClientError, VexylGatewayClient
 from intel.integration import hash_identifier, tool_call_event
 
 client = VexylGatewayClient()
+tenant_hash = hash_identifier(local_tenant_id, application_hashing_key)
 session_hash = hash_identifier(local_session_id, application_hashing_key)
 
 event = tool_call_event(
@@ -99,6 +107,7 @@ event = tool_call_event(
     user_allowed_actions=["search approved documentation"],
     policy_allowed_actions=["search approved documentation"],
     verified_mitigations=["tool_allowlist", "scoped_read_only_credentials"],
+    tenant_id_hash=tenant_hash,
     session_id_hash=session_hash,
 )
 
@@ -132,9 +141,11 @@ import {
 } from "/usr/share/vexyl/integrations/node/vexyl-guard-client.mjs";
 
 const client = new VexylGatewayClient();
+const tenantIdHash = hashIdentifier(localTenantId, applicationHashingKey);
 const sessionIdHash = hashIdentifier(localSessionId, applicationHashingKey);
 const event = ragContentEvent("External document contains instruction-like content.", {
   documentIds: [opaqueDocumentHash],
+  tenantIdHash,
   sessionIdHash,
 });
 

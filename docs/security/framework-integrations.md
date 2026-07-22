@@ -4,6 +4,8 @@ Vexyl Guard framework integrations place the local AI decision gateway at applic
 
 The application remains responsible for creating a short redacted security summary and supplying trusted policy metadata. Retrieved content, model output, tool output, and inter-agent messages must never populate allowlists, user scope, tool policy, approval state, model identity expectations, or budgets.
 
+For multi-tenant applications, derive `tenant_id_hash` with the integration client's `hash_identifier` helper and an application-held key. Pass it with every event for that tenant. Raw tenant names and customer identifiers are not accepted, and tenant-scoped history never correlates with another tenant or with unscoped history.
+
 ## FastAPI And ASGI
 
 `VexylASGIMiddleware` is dependency-free ASGI middleware. It adds a `VexylRequestGuard` to request state and converts uncaught Vexyl policy exceptions into bounded JSON responses:
@@ -29,6 +31,7 @@ async def retrieve(request: Request):
     event = rag_content_event(
         "External document contains instruction-like text.",
         document_ids=[opaque_document_hash],
+        tenant_id_hash=opaque_tenant_hash,
         session_id_hash=opaque_session_hash,
     )
     await request.state.vexyl_guard.require_allowed(event)
@@ -58,6 +61,7 @@ app.post("/retrieve", async (req, res, next) => {
       "External document contains instruction-like text.",
       {
         documentIds: [opaqueDocumentHash],
+        tenantIdHash: opaqueTenantHash,
         sessionIdHash: opaqueSessionHash,
       },
     );
@@ -96,6 +100,7 @@ mcp_guard = MCPToolGuard(
 
 await mcp_guard.authorize(
     "Search the approved internal documentation corpus.",
+    tenant_id_hash=opaque_tenant_hash,
     session_id_hash=opaque_session_hash,
 )
 result = await execute_mcp_tool_with_validated_arguments()
@@ -122,6 +127,7 @@ await model_guard.authorize(
     "Invoke the approved summarization model.",
     model_provider=selected_provider,
     model_name=selected_model,
+    tenant_id_hash=opaque_tenant_hash,
     session_id_hash=opaque_session_hash,
     token_count_estimate=estimated_tokens,
     cost_estimate=estimated_cost,

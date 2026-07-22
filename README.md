@@ -273,7 +273,7 @@ Warnings describe optional or degraded capabilities. Configuration errors return
 
 ## Runtime AI Defense
 
-AI applications, model gateways, RAG pipelines, and agent runtimes can submit a redacted `vexyl.ai_event.v1` envelope before a memory write, plan approval, tool call, external write, or model invocation. A stable session hash enables sequence detection; a stable user hash enables aggregate volume and budget controls.
+AI applications, model gateways, RAG pipelines, and agent runtimes can submit a redacted `vexyl.ai_event.v1` envelope before a memory write, plan approval, tool call, external write, or model invocation. A stable session hash enables sequence detection; a stable user hash enables aggregate volume and budget controls. Multi-tenant applications can add an HMAC-derived `tenant_id_hash` so correlation never crosses tenant boundaries.
 
 ```bash
 sudo vexyl threat --db /var/lib/vexyl/ai_threats.sqlite \
@@ -295,7 +295,7 @@ Explanations use stable rule and context factor codes. They omit excerpts, raw
 content, tool arguments, destinations, and raw or non-opaque source identifiers. The
 strict `vexyl.risk_decision.v1` gateway schema remains unchanged.
 
-The runtime layer correlates high-risk external content with later memory or tool actions, sensitive-data access with egress, repeated tool loops, aggregate token/cost use, high-diversity model probing, and model identity drift. It also enforces trusted metadata boundaries for delegated identity, inter-agent messages, orchestration fanout, human approval, and runtime oversight. Raw prompts, tool arguments, destinations, and arbitrary event context are not stored. Derived runtime history defaults to 24-hour retention.
+The runtime layer correlates high-risk external content with later memory or tool actions, sensitive-data access with egress, repeated tool loops, aggregate token/cost use, high-diversity model probing, and model identity drift. It also enforces trusted metadata boundaries for delegated identity, inter-agent messages, orchestration fanout, human approval, and runtime oversight. Tenant, user, and session scope values are locally re-hashed; raw prompts, tool arguments, destinations, and arbitrary event context are not stored. Derived runtime history defaults to 24-hour retention.
 
 Integration contract and privacy boundary: [`docs/security/runtime-ai-defense.md`](docs/security/runtime-ai-defense.md)
 

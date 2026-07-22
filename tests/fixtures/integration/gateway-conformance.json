@@ -2,6 +2,7 @@
   {
     "name": "authorized read-only tool",
     "event": {
+      "tenant_id_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "input_channel": "tool",
       "data_origin": "internal_db",
       "text_excerpt_redacted": "Search the approved internal documentation.",

@@ -13,7 +13,7 @@ Emit a `vexyl.ai_event.v1` event immediately before a security-sensitive boundar
 - Changing a model, adapter, prompt template, plugin, MCP server, dataset, or other AI supply-chain component.
 - Crossing a configured token or cost budget.
 
-Use an application-generated opaque user hash or session hash. Stable session hashes enable sequence detection without storing usernames or session tokens. Do not place credentials, customer data, raw private prompts, or raw logs in the event.
+Use application-generated opaque user and session hashes. Stable session hashes enable sequence detection without storing usernames or session tokens. Multi-tenant applications should also provide `tenant_id_hash`, generated with `hash_identifier` from an internal tenant reference and an application-held key. Never send a tenant name or customer identifier in that field. Do not place credentials, customer data, raw private prompts, or raw logs in the event.
 
 ## Minimal Event
 
@@ -21,6 +21,7 @@ Use an application-generated opaque user hash or session hash. Stable session ha
 {
   "event_id": "application-generated-uuid",
   "timestamp_utc": "2026-07-18T15:00:00Z",
+  "tenant_id_hash": "89b92958d05fc449d911d1d517ff3ae6839a73348aac6fec44981be08554e95a",
   "user_id_hash": "application-generated-opaque-hash",
   "session_id_hash": "application-generated-opaque-hash",
   "input_channel": "tool",
@@ -138,6 +139,8 @@ The local runtime layer currently detects:
 
 Sequence rules require a stable `session_id_hash`. User-level volume rules can use `user_id_hash`. Events without either identifier are still scored individually but are not correlated.
 
+When `tenant_id_hash` is present, Vexyl Guard requires history to match that tenant scope before applying session or user correlation. Scoped events cannot see another tenant's history, and scoped and unscoped histories remain separate. This prevents reused session or user identifiers from coupling decisions across tenants. The value must be the lowercase 64-character HMAC-SHA256 output of `hash_identifier`; raw tenant names are rejected by the gateway.
+
 `runtime_token_budget` and `runtime_cost_budget` can lower or raise the default short-window limits for a trusted application policy. They must be supplied by the application or gateway, never copied from model output or external content.
 
 The same rule applies to identity, inter-agent, orchestration, approval, and oversight metadata. Fields such as `delegated_identity_verified`, `message_integrity_verified`, `max_fanout_count`, `independent_verification_completed`, and `oversight_disabled` describe controls observed by trusted application code. Never let retrieved documents, model output, or tool output set those policy fields directly.
@@ -146,7 +149,7 @@ The same rule applies to identity, inter-agent, orchestration, approval, and ove
 
 Recorded runtime history contains derived facts only:
 
-- Tenant identifiers are omitted. Event, user, session, document, destination, and content identifiers are locally re-hashed.
+- Raw tenant identifiers are omitted. An optional application-generated tenant HMAC and all event, user, session, document, destination, and content identifiers are locally re-hashed before storage.
 - Redacted and length-limited excerpts.
 - Bounded tool/model labels with common secret and email patterns removed.
 - Boolean risk flags, token/cost estimates, matched rules, and risk scores.

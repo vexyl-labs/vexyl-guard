@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import math
+import re
 from datetime import datetime
 from typing import Any, Iterable
 
@@ -14,6 +15,7 @@ DECISION_SCHEMA = "vexyl.risk_decision.v1"
 ALLOWED_EVENT_FIELDS = {
     "event_id",
     "timestamp_utc",
+    "tenant_id_hash",
     "user_id_hash",
     "session_id_hash",
     "model_provider",
@@ -137,6 +139,8 @@ ALLOWED_DATA_CLASSIFICATIONS = {
     "unknown",
 }
 
+OPAQUE_HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+
 
 class GatewayEventError(ValueError):
     """Raised when an integration submits an unsafe or malformed event."""
@@ -165,6 +169,7 @@ def validate_gateway_event(data: dict[str, Any]) -> RuntimeAIEvent:
 
     _optional_string(data, "event_id", 128)
     _validate_timestamp(data.get("timestamp_utc"))
+    _opaque_hash(data, "tenant_id_hash")
     _optional_string(data, "user_id_hash", 256)
     _optional_string(data, "session_id_hash", 256)
     _optional_string(data, "model_provider", 128)
@@ -189,6 +194,7 @@ def validate_gateway_event(data: dict[str, Any]) -> RuntimeAIEvent:
 def prompt_event(
     security_summary: str,
     *,
+    tenant_id_hash: str | None = None,
     user_id_hash: str | None = None,
     session_id_hash: str | None = None,
     data_classification: str = "unknown",
@@ -197,6 +203,7 @@ def prompt_event(
         input_channel="chat",
         data_origin="user",
         security_summary=security_summary,
+        tenant_id_hash=tenant_id_hash,
         user_id_hash=user_id_hash,
         session_id_hash=session_id_hash,
         data_classification=data_classification,
@@ -207,6 +214,7 @@ def rag_content_event(
     security_summary: str,
     *,
     document_ids: Iterable[str] = (),
+    tenant_id_hash: str | None = None,
     user_id_hash: str | None = None,
     session_id_hash: str | None = None,
     data_classification: str = "unknown",
@@ -215,6 +223,7 @@ def rag_content_event(
         input_channel="rag",
         data_origin="retrieved_external",
         security_summary=security_summary,
+        tenant_id_hash=tenant_id_hash,
         user_id_hash=user_id_hash,
         session_id_hash=session_id_hash,
         data_classification=data_classification,
@@ -226,6 +235,7 @@ def memory_write_event(
     security_summary: str,
     *,
     data_origin: str,
+    tenant_id_hash: str | None = None,
     user_id_hash: str | None = None,
     session_id_hash: str | None = None,
     data_classification: str = "unknown",
@@ -234,6 +244,7 @@ def memory_write_event(
         input_channel="memory",
         data_origin=data_origin,
         security_summary=security_summary,
+        tenant_id_hash=tenant_id_hash,
         user_id_hash=user_id_hash,
         session_id_hash=session_id_hash,
         data_classification=data_classification,
@@ -248,6 +259,7 @@ def agent_plan_event(
     allowed_tools: Iterable[str] = (),
     user_allowed_actions: Iterable[str] = (),
     policy_allowed_actions: Iterable[str] = (),
+    tenant_id_hash: str | None = None,
     user_id_hash: str | None = None,
     session_id_hash: str | None = None,
     human_approval: bool = False,
@@ -256,6 +268,7 @@ def agent_plan_event(
         input_channel="agent_plan",
         data_origin="internal_db",
         security_summary=security_summary,
+        tenant_id_hash=tenant_id_hash,
         user_id_hash=user_id_hash,
         session_id_hash=session_id_hash,
         planned_actions=list(planned_actions),
@@ -278,6 +291,7 @@ def tool_call_event(
     user_allowed_actions: Iterable[str] = (),
     policy_allowed_actions: Iterable[str] = (),
     verified_mitigations: Iterable[str] = (),
+    tenant_id_hash: str | None = None,
     user_id_hash: str | None = None,
     session_id_hash: str | None = None,
     data_origin: str = "internal_db",
@@ -290,6 +304,7 @@ def tool_call_event(
         input_channel="tool",
         data_origin=data_origin,
         security_summary=security_summary,
+        tenant_id_hash=tenant_id_hash,
         user_id_hash=user_id_hash,
         session_id_hash=session_id_hash,
         tool_name=tool_name,
@@ -333,6 +348,7 @@ def model_api_event(
     model_name: str,
     expected_model_provider: str,
     expected_model_name: str,
+    tenant_id_hash: str | None = None,
     user_id_hash: str | None = None,
     session_id_hash: str | None = None,
     token_count_estimate: int = 0,
@@ -344,6 +360,7 @@ def model_api_event(
         input_channel="model",
         data_origin="internal_db",
         security_summary=security_summary,
+        tenant_id_hash=tenant_id_hash,
         user_id_hash=user_id_hash,
         session_id_hash=session_id_hash,
         model_provider=model_provider,
@@ -362,6 +379,7 @@ def model_api_event(
 def supply_chain_event(
     security_summary: str,
     *,
+    tenant_id_hash: str | None = None,
     user_id_hash: str | None = None,
     session_id_hash: str | None = None,
     human_approval: bool = False,
@@ -370,6 +388,7 @@ def supply_chain_event(
         input_channel="supply_chain",
         data_origin="supply_chain",
         security_summary=security_summary,
+        tenant_id_hash=tenant_id_hash,
         user_id_hash=user_id_hash,
         session_id_hash=session_id_hash,
         planned_actions=["change AI supply-chain component"],
@@ -382,6 +401,7 @@ def _event(
     input_channel: str,
     data_origin: str,
     security_summary: str,
+    tenant_id_hash: str | None,
     user_id_hash: str | None,
     session_id_hash: str | None,
     **values: Any,
@@ -392,6 +412,8 @@ def _event(
         "text_excerpt_redacted": security_summary,
         **values,
     }
+    if tenant_id_hash:
+        event["tenant_id_hash"] = tenant_id_hash
     if user_id_hash:
         event["user_id_hash"] = user_id_hash
     if session_id_hash:
@@ -422,6 +444,16 @@ def _optional_string(data: dict[str, Any], key: str, maximum_length: int) -> Non
         raise GatewayEventError(f"{key} must be a non-empty string")
     if len(value) > maximum_length:
         raise GatewayEventError(f"{key} exceeds {maximum_length} characters")
+
+
+def _opaque_hash(data: dict[str, Any], key: str) -> None:
+    value = data.get(key)
+    if value is None:
+        return
+    if not isinstance(value, str) or not OPAQUE_HASH_PATTERN.fullmatch(value):
+        raise GatewayEventError(
+            f"{key} must be a lowercase 64-character HMAC-SHA256 value"
+        )
 
 
 def _enum_value(data: dict[str, Any], key: str, allowed: set[str]) -> None:

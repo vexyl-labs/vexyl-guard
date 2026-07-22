@@ -183,8 +183,13 @@ class FrameworkIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 "scoped_read_only_credentials",
             ],
         )
-        await guard.authorize("Search approved internal documentation.")
+        tenant_id_hash = "a" * 64
+        await guard.authorize(
+            "Search approved internal documentation.",
+            tenant_id_hash=tenant_id_hash,
+        )
         event = client.events[0]
+        self.assertEqual(event["tenant_id_hash"], tenant_id_hash)
         self.assertEqual(event["tool_name"], "mcp:docs:search")
         self.assertEqual(event["context"]["allowed_tools"], ["mcp:docs:search"])
         self.assertEqual(
@@ -204,9 +209,11 @@ class FrameworkIntegrationTests(unittest.IsolatedAsyncioTestCase):
             "Invoke the approved summarization model.",
             model_provider="approved-provider",
             model_name="approved-model",
+            tenant_id_hash="b" * 64,
             token_count_estimate=1200,
         )
         event = client.events[0]
+        self.assertEqual(event["tenant_id_hash"], "b" * 64)
         self.assertEqual(event["model_provider"], "approved-provider")
         self.assertEqual(event["context"]["expected_model_name"], "approved-model")
 
